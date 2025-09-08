@@ -82,7 +82,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside, 
     <div class="flex items-center gap-0 md:gap-0">
       <!-- Language switch (hidden when search is open) -->
       <div class="flex items-center text-[#2d2d2d] text-[1rem] transition-opacity duration-200"
-        :class="searchOpen ? 'opacity-0 pointer-events-none md:opacity-90 md:pointer-events-auto' : 'opacity-90'">
+        :class="searchOpen ? 'opacity-0 pointer-events-none  md:pointer-events-auto' : 'opacity-90'">
         <NuxtLink :to="switchLocalePath('en')" class="no-underline font-english"
           :class="locale === 'en' ? 'text-[#ffde00]' : 'text-inherit'" aria-label="Switch to English">EN</NuxtLink>
         <span class="px-2 opacity-40">|</span>
@@ -99,8 +99,8 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside, 
 
   <!-- Expanding input (smooth width + opacity) -->
   <div
-    class="mx-2 h-[36px] overflow-hidden -mr-10 ml-10  transition-all duration-300 ease-out"
-    :class="searchOpen ? 'w-[200px]' : 'w-0 opacity-0'"
+    class="mx-2 h-[36px] overflow-hidden  transition-all duration-300 ease-out"
+    :class="searchOpen ? 'w-[200px]' : 'w-0 opacity-0', locale === 'en' ? '-mr-10 ml-10' : '-ml-10 mr-10'"
     :aria-hidden="searchOpen ? 'false' : 'true'"
   >
     <input
