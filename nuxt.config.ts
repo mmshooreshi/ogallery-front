@@ -48,6 +48,7 @@ export default defineNuxtConfig({
 
   // Nuxt Content v3
   content: {
+    
     build: {
       markdown: {
         toc: { depth: 3, searchDepth: 3 },
@@ -69,8 +70,9 @@ export default defineNuxtConfig({
     },
     // experimental: { sqliteConnector: 'native' }, // if Node >= 22.5
     experimental: {
-      sqliteConnector: 'native'
+      sqliteConnector: 'better-sqlite3'
     },
+    
 
     // database: { type: 'sqlite', filename: '.data/content.db' }
   },
@@ -111,7 +113,7 @@ export default defineNuxtConfig({
 
   // Nitro (no process/env usage here)
 nitro: {
-  preset: 'node-server',
+  preset: 'vercel',
   routeRules: {
     '/sitemap.xml': { prerender: !import.meta.env?.VITEST },
     '/(artists|exhibitions|viewing-rooms|window|publications|news)(/**)?': {
