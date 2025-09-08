@@ -4,7 +4,15 @@
     
     <!-- <NuxtLayout> -->
       <!-- <SiteHeader /> -->
+
+      <div class="w-screen h-[65px]">
+  <SiteHeader2/>
+</div>
+<div class="h-max">
       <NuxtPage/>
+</div>
+
+
     <!-- </NuxtLayout> -->
     <!-- <NuxtWelcome /> -->
   </div>

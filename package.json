@@ -28,11 +28,12 @@
     "typescript": "^5.6.3",
     "vite-svg-loader": "^5.1.0",
     "vue": "^3.5.20",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "unocss": "^66.5.1",
+    "@unocss/nuxt": "^66.5.1"
+
   },
   "devDependencies": {
-    "@unocss/nuxt": "^66.5.1",
-    "unocss": "^66.5.1",
     "vitest": "^3.2.4",
     "eslint": "^9.0.0",
     "@nuxt/test-utils": "3.19.2"
