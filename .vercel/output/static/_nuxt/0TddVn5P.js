@@ -1,0 +1,1 @@
+import{_ as r}from"./DlAUqK2U.js";import{c as a,a as t,o}from"#entry";const s={};function c(l,e){return o(),a("section",null,[...e[0]||(e[0]=[t("h1",{class:"text-2xl font-semibold mb-4"},"Vault (Protected)",-1),t("p",null,"Wire a passphrase check later (lightweight client guard or server auth).",-1)])])}const u=r(s,[["render",c]]);export{u as default};

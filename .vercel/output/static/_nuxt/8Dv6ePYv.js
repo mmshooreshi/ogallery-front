@@ -1,0 +1,1 @@
+import{_ as o}from"./DlAUqK2U.js";import{c as s,a as t,o as n}from"#entry";const r={};function l(a,e){return n(),s("div",null,[...e[0]||(e[0]=[t("p",{class:"font-english text-lg"},"Hello World",-1),t("p",{class:"font-persian text-lg"},"سلام دنیا",-1)])])}const p=o(r,[["render",l]]);export{p as default};

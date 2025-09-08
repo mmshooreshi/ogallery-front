@@ -1,0 +1,1 @@
+import{_ as t}from"./DlAUqK2U.js";import{c as n,a as o,o as r}from"#entry";const s={};function a(c,e){return r(),n("section",null,[...e[0]||(e[0]=[o("h1",{class:"text-2xl font-semibold mb-4"},"Information",-1),o("p",null,"Add About/Hours/Map/Contact/Subscribe content here.",-1)])])}const m=t(s,[["render",a]]);export{m as default};

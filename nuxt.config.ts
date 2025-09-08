@@ -126,7 +126,7 @@ nitro: {
     content: { driver: 'fs', base: 'content' }
   },
   prerender: {
-    crawlLinks: process.env.VERCEL ? false : true,
+    crawlLinks: process.env.VERCEL ? false : false,
     routes: import.meta.env?.VITEST ? [] : [
        '/sitemap.xml','/'
       // '/', '/artists', '/exhibitions', '/viewing-rooms', '/window',
