@@ -66,8 +66,12 @@ export default defineNuxtConfig({
       enabled: true,
       port: 4000,
       showURL: false
-    }
+    },
     // experimental: { sqliteConnector: 'native' }, // if Node >= 22.5
+    experimental: {
+      sqliteConnector: 'native'
+    },
+
     // database: { type: 'sqlite', filename: '.data/content.db' }
   },
 
