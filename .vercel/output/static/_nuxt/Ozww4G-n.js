@@ -1,1 +1,0 @@
-import{ab as e,ac as n}from"#entry";import{u as i}from"./D2xXEtf8.js";const d=e(t=>{if(!t.path.startsWith("/admin"))return;const{isAuthed:a}=i();if(!a.value&&t.path!=="/admin/login")return n("/admin/login?next="+encodeURIComponent(t.fullPath))});export{d as default};
