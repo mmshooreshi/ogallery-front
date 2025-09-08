@@ -126,9 +126,11 @@ nitro: {
     content: { driver: 'fs', base: 'content' }
   },
   prerender: {
+    crawlLinks: process.env.VERCEL ? false : true,
     routes: import.meta.env?.VITEST ? [] : [
-      '/', '/artists', '/exhibitions', '/viewing-rooms', '/window',
-      '/publications', '/news', '/studio', '/gallery', '/sitemap.xml'
+       '/sitemap.xml','/'
+      // '/', '/artists', '/exhibitions', '/viewing-rooms', '/window',
+      // '/publications', '/news', '/studio', '/gallery', '/sitemap.xml'
     ]
   }
 },
