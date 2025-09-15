@@ -21,9 +21,10 @@ const currentEx = computed(() => {
 })
 const heroImage = computed(() => currentEx.value?.images?.[0] || '/images/placeholder-hero.jpg')
 const heroTitle = computed(() => currentEx.value?.title || '')
-const heroArtist = computed(() => (currentEx.value?.artists?.[0] || '').toUpperCase())
+const heroArtist = computed(() => currentEx.value?.artists?.[0] || '')
 const heroDates = computed(() => {
-  const s = currentEx.value?.startDate || '', e = currentEx.value?.endDate || ''
+  const s = currentEx.value?.startDate || ''
+  const e = currentEx.value?.endDate || ''
   return s && e ? `${prettyDate(s)} – ${prettyDate(e)}` : s || e || ''
 })
 
@@ -43,10 +44,19 @@ function acceptCookies () {
 
 // Helpers
 function prettyDate(iso: string) {
-  const [y, m, d] = iso.split('-').map(Number)
-  const dt = new Date(Date.UTC(y, (m || 1) - 1, d || 1))
-  return dt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()
+  const [y, m, d] = iso.split('-').map(Number);
+  
+  // Fallback for undefined values
+  const year = y ?? 1970;  // Default to 1970 if year is undefined
+  const month = m ?? 1;    // Default to January (1) if month is undefined
+  const day = d ?? 1;      // Default to the 1st if day is undefined
+  
+  // Ensure valid number arguments are passed to Date.UTC()
+  const dt = new Date(Date.UTC(year, month - 1, day)); // month is 0-indexed in JavaScript
+
+  return dt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase();
 }
+
 </script>
 
 <template>
@@ -106,14 +116,10 @@ function prettyDate(iso: string) {
         <NuxtImg :src="n.coverImage || '/images/ph-thumb.svg'" class="news__image" alt="" />
 
       </article>
+      <hr class="hrCustom">
     </section>
 
-    <!-- FOOTER -->
-    <footer class="foot">
-      <div>COPYRIGHT © {{ new Date().getFullYear() }} OGALLERY</div>
-      <NuxtLink to="/mailing-list" class="link">JOIN OUR MAILING LIST</NuxtLink>
-      <NuxtLink to="/cookies" class="link">MANAGE COOKIES</NuxtLink>
-    </footer>
+
   </main>
 </template>
 
@@ -122,7 +128,15 @@ function prettyDate(iso: string) {
 .home { display:flex; flex-direction:column; }
 
 /* HERO */
-.hero { position:relative; height:78vh; min-height:520px; width:100%; overflow:hidden; }
+.hero { 
+    position:relative;
+  height:clamp(520px, 92vh, 1000px); /* ✅ keeps it safe on zoom */
+  width:100%; 
+  overflow:hidden;
+
+}
+
+
 .hero__img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .hero__overlay { position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,.25), rgba(0,0,0,0)); }
 .hero__content {
@@ -159,33 +173,30 @@ function prettyDate(iso: string) {
 .fade-enter-active,.fade-leave-active { transition:opacity .2s ease; }
 .fade-enter-from,.fade-leave-to { opacity:0; }
 
-/* News */
-.news { padding: 24px 16px 32px; }
-@media (min-width: 640px){ .news{ padding-inline:24px; } }
-@media (min-width: 960px){ .news{ padding-inline:40px; } }
+
+
 .news__item {
   display:grid; grid-template-columns: 1fr; gap:18px; align-items:flex-start;
-  padding:24px 0; border-bottom:1px solid rgba(0,0,0,.06);
+  padding: 24px 16px 32px; 
+  /* border-bottom:1px solid rgba(0,0,0,.06); */
 }
+@media (min-width: 640px){ .news__item{ padding-inline:24px; } }
 @media (min-width: 760px){
   .news__item { grid-template-columns: 1fr 280px; }
 }
+@media (min-width: 960px){ .news__item{ padding-inline:40px; } }
+
 .news__title { margin:0; font-size:20px; font-weight:600; }
 .news__date { margin:6px 0 0; font-size:12px; opacity:.7; }
 .news__teaser { margin:12px 0 14px; line-height:1.7; opacity:.9; }
 .news__image { width:100%; height:190px; object-fit:cover; border-radius:8px; }
 @media (min-width: 900px){ .news__image{ height:210px; } }
 
-/* Footer */
-.foot {
-  /* margin-top: 24px;  */
-  /* border-top:1px solid rgba(0,0,0,.08); */
-  margin-top: 0px;
-  padding: 28px 12px 40px; text-align:center;
-  color:#666; font-size:12px; letter-spacing:.18em;
-  display: flex; justify-content:space-between; align-items :baseline;
-  width: min-content; text-wrap: nowrap; gap: 30px;
-  margin: auto; font-family: monospace;
+.hrCustom{
+    margin: 1rem 0;
+    color: #595a5c;
+    border: 0;
+    border-top: 1px solid;
+    opacity: .25;
 }
-.foot .link { display:block; margin-top:10px; }
 </style>

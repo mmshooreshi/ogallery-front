@@ -70,9 +70,11 @@ export default defineNuxtConfig({
     },
     // experimental: { sqliteConnector: 'native' }, // if Node >= 22.5
     experimental: {
-      sqliteConnector: 'better-sqlite3'
+      sqliteConnector: 'native',
     },
+
     
+    // database: { type: 'memory' } as any // force memory DB, no sqlite
 
     // database: { type: 'sqlite', filename: '.data/content.db' }
   },

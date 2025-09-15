@@ -57,7 +57,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside, 
 
 <template>
   <header
-    class="fixed top-0 inset-x-0 z-40 w-full h-[60px] my-[2.5px] bg-white border-b border-black/8 flex items-center">
+    class="fixed top-0 inset-x-0 z-40 w-full h-[60px] my-[2.5px] bg-white/80 border-b border-black/8 flex items-center">
     <!-- Left: Hamburger (60x60) -->
     <!-- <button
       class="w-[60px] h-[60px] flex items-center justify-center appearance-none border-none bg-transparent cursor-pointer text-[#595a5c]"

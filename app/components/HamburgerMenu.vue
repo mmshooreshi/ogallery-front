@@ -77,7 +77,7 @@ defineEmits(['update:modelValue'])
 
 /* Animation when active */
 .menu-icon {
-  transition: transform 400ms;
+  transition: transform 350ms;
 }
 
 .menu-icon.rotateOnActive.active {
@@ -88,7 +88,7 @@ defineEmits(['update:modelValue'])
 .line {
   fill: none;
   stroke-linecap: round;
-  transition: stroke-dasharray 400ms, stroke-dashoffset 400ms;
+  transition: stroke-dasharray 350ms, stroke-dashoffset 350ms;
 }
 
 /* Ham1 animation */

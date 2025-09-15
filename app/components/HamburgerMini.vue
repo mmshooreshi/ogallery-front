@@ -144,7 +144,7 @@ onBeforeUnmount(() => {
   stroke: #fff;
   stroke-width: 5.5;
   stroke-linecap: round;
-  transition: stroke-dasharray 400ms, stroke-dashoffset 400ms, transform 400ms;
+  transition: stroke-dasharray 350ms, stroke-dashoffset 350ms, transform 350ms;
 }
 
 /* Simple animation borrowed from "hamRotate ham1" style */
@@ -172,7 +172,7 @@ onBeforeUnmount(() => {
   gap: 16px;
   padding: 24px;
   transform: translateY(-100%);
-  transition: transform 200ms ease;
+  transition: transform 350ms ease;
 }
 .hp-nav.active {
   transform: translateY(0);

@@ -96,7 +96,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   color: #595A5C;             /* you can override by setting color on the button */
-  transition: transform 400ms;
+  transition: transform 350ms;
   -webkit-tap-highlight-color: transparent;
 }
 .ham:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
@@ -112,9 +112,9 @@ onMounted(async () => {
   stroke: currentColor;
   stroke-linecap: round;
   transition:
-    stroke-dasharray 400ms,
-    stroke-dashoffset 400ms,
-    transform 400ms;
+    stroke-dasharray 350ms,
+    stroke-dashoffset 350ms,
+    transform 350ms;
   transform-box: fill-box;
   transform-origin: 50% 50%;
 }
