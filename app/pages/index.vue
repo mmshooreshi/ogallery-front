@@ -1,11 +1,3 @@
-<!-- <template>
-  <section>
-    <h1 class="text-3xl font-semibold mb-4">O Gallery</h1>
-    <p class="opacity-70">Starter homepage. Wire featured exhibitions & news here.</p>
-  </section>
-</template>
-
- -->
 <!-- app/pages/index.vue -->
 <script setup lang="ts">
 useSeoMeta({ title: 'Home' })

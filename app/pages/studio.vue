@@ -1,3 +1,4 @@
+<!-- app/pages/studio.vue -->
 <script setup lang="ts">
 
 const { data: items } = await useAsyncData('studio', () =>

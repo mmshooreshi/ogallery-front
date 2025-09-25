@@ -1,4 +1,4 @@
-// test-list.ts
+// b2/test-list.ts
 import { S3Client, ListBucketsCommand } from '@aws-sdk/client-s3'
 const bucket = 'ogallery'
 const region = 'us-east-005'

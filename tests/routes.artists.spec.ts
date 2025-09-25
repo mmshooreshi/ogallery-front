@@ -1,3 +1,4 @@
+// tests/routes.artists.spec.ts
 import { describe, it, expect } from 'vitest'
 import { setup, $fetch } from '@nuxt/test-utils'
 

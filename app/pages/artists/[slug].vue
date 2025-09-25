@@ -1,51 +1,45 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import emblaCarouselVue from 'embla-carousel-vue'
-import Autoplay from 'embla-carousel-autoplay'
+import { useLocalCache } from '~/composables/useLocalCache'
+import GalleryLightbox from '~/components/GalleryLightBox.vue'
+
+
+const LBL = '[artists/[slug]]'
+const log  = (...a:any[]) => console.log(LBL, ...a)
 
 const route = useRoute()
-const locale = useState<'EN' | 'FA'>('locale')
+const { locale } = useI18n()
+const slug = computed(() => String(route.params.slug))
+const key  = computed(() => `artist-${locale.value}-${slug.value}`)
 
-const key = computed(() => `artist-${locale.value}-${route.params.slug}`)
-
-const { data: artist, pending, error } = await useFetch(
-  () => `/api/artists/${route.params.slug}`,
-  {
-    key,
-    query: () => ({ locale: locale.value }),
-    watch: [() => route.params.slug, locale],
-    default: () => null,
-  }
+const { data: artist, pending, error } = useLocalCache(
+  () => key.value,
+  () => $fetch(`/_q/artists/${encodeURIComponent(slug.value)}`, {
+    query: { locale: locale.value },
+  }),
+  { ttlMs: 60_000, swr: true },
 )
 
-const loc = computed(() => artist.value?.locales?.[0] ?? null)
+const showLightbox = ref(false)
+const lightboxIndex = ref(0)
 
-// Embla setup with autoplay
-const [emblaRef, emblaApi] = emblaCarouselVue(
-  { loop: true },
-  [Autoplay({ delay: 4000, stopOnInteraction: false })]
+function openLightbox(i: number) {
+  lightboxIndex.value = i
+  showLightbox.value = true
+}
+
+const loc = computed(() => (artist.value as any)?.locales?.[0] ?? null)
+const installationSlides = computed(
+  () => artist.value?.media?.filter((m: any) => m.role === 'INSTALLATION') ?? [],
 )
 
-const selectedIndex = ref(0)
-const totalSlides = ref(0)
+const selectedWorks = computed(() =>
+  artist.value?.media?.filter((m: any) => m.role === 'SELECTED_WORK') ?? []
+)
 
-onMounted(() => {
-  if (emblaApi.value) {
-    totalSlides.value = emblaApi.value.slideNodes().length
-    emblaApi.value.on('select', () => {
-      selectedIndex.value = emblaApi.value?.selectedScrollSnap() || 0
-    })
-  }
-})
-
-useSeoMeta({
-  title: () => loc.value?.title ?? 'Artist',
-  description: () => (loc.value?.summary || '').slice(0, 160),
-})
 </script>
 
 <template>
-  <section>
+  <section class="px-8">
     <!-- Fixed Artist Header -->
     <div
       id="artist-header"
@@ -55,61 +49,36 @@ useSeoMeta({
         class="max-w-screen-md mx-auto flex flex-col md:flex-row items-start md:items-center justify-between px-6 py-3"
       >
         <div class="flex justify-between items-center w-full">
-          <h1 class="text-xl md:text-2xl uppercase !font-light text-gray-700">
+          <h1 class="text-xl md:text-2xl uppercase !font-light text-gray-700/80">
             {{ loc?.title || 'Artist' }}
           </h1>
           <nav class="flex flex-wrap gap-2 text-sm md:text-base uppercase">
-            <a
-              href="#bio"
-              class="tracking-tight text-gray-700 hover:text-yellow-600 transition"
-              >Biography</a
-            >
+            <a href="#bio" class="no-underline tracking-tight text-gray-700 hover:text-yellow-500 transition">Biography</a>
             <span class="hidden md:inline">|</span>
-            <a
-              href="#works"
-              class="tracking-tight text-gray-700 hover:text-yellow-600 transition"
-              >Selected Works</a
-            >
+            <a href="#works" class="no-underline tracking-tight text-gray-700 hover:text-yellow-500 transition">Selected Works</a>
             <span class="hidden md:inline">|</span>
-            <a
-              href="#installation"
-              class="tracking-tight text-gray-700 hover:text-yellow-600 transition"
-              >Installation Views</a
-            >
+            <a href="#installation" class="no-underline tracking-tight text-gray-700 hover:text-yellow-500 transition">Installation Views</a>
           </nav>
         </div>
       </div>
     </div>
 
     <!-- Push content below fixed header -->
-    <div class="pt-20 max-w-screen-md mx-auto px-4">
-      <div v-if="pending" class="opacity-70">Loading…</div>
+    <div class="pt-20  max-w-screen-md mx-auto px-8">
+
+      <div v-if="pending" class="w-max py-0 mt-4 text-white bg-gray-500/30 px-2 ">Loading…</div>
       <div v-else-if="error" class="text-red-600">Error loading artist.</div>
 
       <article v-else-if="artist">
-        <!-- Artist Intro -->
-        <header id="bio" class="mb-6 flex items-center gap-4">
-          <NuxtImg
-            v-if="artist.media?.find(m => m.role === 'HERO')"
-            :src="artist.media.find(m => m.role === 'HERO')?.media.url"
-            width="120"
-            height="120"
-            class="rounded-full object-cover"
-            :alt="loc?.title || ''"
-          />
-        </header>
-
         <!-- BIO + CV -->
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl !font-light uppercase tracking-tight text-gray-700">
-            Bio
-          </h2>
+        <div id="bio" class="flex items-center justify-between mb-4">
+          <div class="text-[23px] !font-thin uppercase tracking-tight text-gray-800/80">Bio</div>
           <a
             v-if="artist.media?.find(m => m.role === 'CV')"
             :href="artist.media.find(m => m.role === 'CV')?.media.url"
             target="_blank"
             rel="noopener"
-            class="text-sm uppercase underline text-gray-600 hover:text-yellow-600 transition"
+            class="no-underline text-md uppercase underline text-gray-600 hover:text-yellow-500 transition"
           >
             Download CV
           </a>
@@ -118,103 +87,58 @@ useSeoMeta({
         <!-- Bio Content -->
         <div
           v-if="loc?.bodyHtml"
-          class="prose prose-sm sm:prose lg:prose-lg max-w-none leading-relaxed"
+          class="prose prose-sm sm:prose my-12 lg:prose-lg max-w-none text-md text-gray-700/85 leading-relaxed"
           v-html="loc.bodyHtml"
         />
         <p v-else class="opacity-70">Biography coming soon.</p>
 
-        <!-- Selected Works -->
-        <section
-          id="works"
-          v-if="artist.media?.some(m => m.role === 'SELECTED_WORK')"
-          class="mt-12"
+    <!-- Selected Works -->
+    <section id="works" v-if="selectedWorks" class="mt-12 scroll-mt-20">
+        <h2 class="text-2xl !font-light text-gray-700/90 mb-4 uppercase tracking-tight">Selected Works</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div
+            v-for="(m, i) in selectedWorks"
+            :key="m.media.url"
+            @click="openLightbox(i)"
+            class="cursor-pointer"
         >
-          <h2
-            class="text-2xl !font-light text-gray-600 mb-4 uppercase tracking-tight"
-          >
-            Selected Works
-          </h2>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div
-              v-for="m in artist.media.filter(m => m.role === 'SELECTED_WORK')"
-              :key="m.id"
-            >
-              <NuxtImg
-                :src="m.media.url"
-                class="w-full aspect-square object-cover hover:scale-95 hover:opacity-80 transition-transform cursor-pointer "
-                :alt="m.media.alt || ''"
-              />
-            </div>
-          </div>
-        </section>
+            <NuxtImg
+            :src="m.media.url"
+            class="w-full aspect-square object-cover hover:scale-95 hover:opacity-80 transition-transform"
+            :alt="m.media.alt || ''"
+            loading="lazy"
+            decoding="async"
+            />
+        </div>
+        </div>
 
-<!-- Installation Views -->
-<section
-  id="installation"
-  v-if="artist?.media?.some(m => m.role === 'INSTALLATION')"
-  class="mt-12"
->
-  <h2 class="text-2xl font-light text-gray-700 mb-4 uppercase tracking-tight">
-    Installation Views
-  </h2>
-
-  <div class="embla relative" ref="emblaRef">
-    <!-- Slides -->
-    <div class="embla__container">
-      <div
-        v-for="m in artist.media.filter(m => m.role === 'INSTALLATION')"
-        :key="m.id"
-        class="embla__slide flex justify-center"
-      >
-        <NuxtImg
-          :src="m.media.url"
-          :alt="m.media.alt || ''"
-          class="w-auto h-full object-contain "
+        <GalleryLightBox
+        v-if="showLightbox"
+        :slides="selectedWorks"
+        :start-index="lightboxIndex"
+        @close="showLightbox = false"
         />
-      </div>
-    </div>
+    </section>
 
-    <!-- Fixed overlay indicators -->
-    <div
-      class="z-100 bottom-4 sticky left-0 right-0 flex justify-center gap-2 px-4"
-    >
-      <div
-        v-for="(s, i) in totalSlides"
-        :key="i"
-        class="h-0.5 flex-1 rounded transition-colors"
-        :class="i === selectedIndex ? 'bg-yellow-500' : 'bg-gray-300'"
-      ></div>
-    </div>
-  </div>
-</section>
+        <!-- Installation Views -->
+        <section id="installation" v-if="installationSlides.length" class="mt-12">
+          <h2 class="text-2xl font-light text-gray-700/90 mb-4 uppercase tracking-tight">Installation Views</h2>
 
-
-</article>
+          <EmblaCarousel :slides="installationSlides" />
+        </section>
+      </article>
 
       <p v-else class="opacity-70">Artist not found.</p>
 
       <footer class="mt-8">
-        <NuxtLink
-          to="/artists"
-          class="text-sm underline hover:text-yellow-600 transition"
-          >← All artists</NuxtLink
-        >
+        <NuxtLink to="/artists" class="text-sm underline hover:text-yellow-500 transition">← All artists</NuxtLink>
       </footer>
     </div>
   </section>
 </template>
 
 <style scoped>
-.embla {
-  overflow: hidden;
-  width: 100%;
-  max-width: 100%;
-}
-.embla__container {
-  display: flex;
-}
-.embla__slide {
-  flex: 0 0 100%; /* one slide per page */
-  min-width: 0;
+#bio, #works, #installation {
+  scroll-margin-top: 160px; /* your header height + a bit of padding */
 }
 </style>

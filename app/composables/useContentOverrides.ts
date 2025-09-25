@@ -1,3 +1,4 @@
+// app/composables/useContentOverrides.ts
 export function useContentOverrides() {
   function fromLS(collection: string) {
     if (import.meta.server) return []

@@ -1,4 +1,4 @@
-// set-cors.ts
+// b2/set-cors.ts
 import { S3Client, PutBucketCorsCommand } from '@aws-sdk/client-s3'
 
 const bucket = 'ogallery'

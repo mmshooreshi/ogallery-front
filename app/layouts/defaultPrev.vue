@@ -1,3 +1,4 @@
+<!-- app/layouts/defaultPrev.vue -->
 <template>
   <div>
     <header class="p-4 border-b flex items-center justify-between">

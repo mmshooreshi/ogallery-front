@@ -1,3 +1,4 @@
+<!-- app/pages/window/[slug].vue -->
 <script setup lang="ts">
 
 const route = useRoute()

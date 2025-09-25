@@ -1,3 +1,4 @@
+<!-- app/components/SiteFooter.vue -->
 <template>
     <!-- FOOTER -->
     <footer class="foot flex flex-col sm:flex-row ">

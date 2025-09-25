@@ -1,3 +1,4 @@
+<!-- app/pages/viewing-rooms/index.vue -->
 <script setup lang="ts">
 const { data } = await useAsyncData('viewing-rooms', () =>
   queryCollection('viewingRooms').all() // NOTE: viewingRooms (no hyphen)

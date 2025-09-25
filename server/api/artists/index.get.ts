@@ -1,3 +1,4 @@
+// server/api/artists/index.get.ts
 import { prisma as db } from '~~/server/lib/prisma'
 import { Locale } from '@prisma/client'
 

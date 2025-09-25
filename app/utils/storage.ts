@@ -1,3 +1,4 @@
+// app/utils/storage.ts
 export type Entity = Record<string, any> & { slug: string }
 export type Collection = 'artists'|'exhibitions'|'window'|'viewing-rooms'|'publications'|'news'|'studio'
 const KEY = 'admin-content-overrides'

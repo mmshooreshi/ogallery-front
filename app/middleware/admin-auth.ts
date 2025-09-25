@@ -1,4 +1,4 @@
-// export default defineNuxtRouteMiddleware((to) => {
+// app/middleware/admin-auth.ts
 //   if (!to.path.startsWith('/admin')) return
 //   const { isAuthed } = useAdminAuth()
 //   if (!isAuthed.value && to.path !== '/admin/login') {

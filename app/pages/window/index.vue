@@ -1,3 +1,4 @@
+<!-- app/pages/window/index.vue -->
 <script setup lang="ts">
 const { data } = await useAsyncData('window', () =>
   queryCollection('window').all()

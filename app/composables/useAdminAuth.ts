@@ -1,4 +1,4 @@
-// import { useCookie } from '#app'
+// app/composables/useAdminAuth.ts
 
 // const ADMIN_PASSWORD = 'change-me-now'
 // const TOKEN_COOKIE = 'admin_token'

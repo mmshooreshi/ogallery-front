@@ -1,4 +1,4 @@
-<!-- app/pages/admin/index.vue -->
+<!-- app/pages/admin/indexPrev.vue -->
 <script setup lang="ts">
 definePageMeta({ middleware: 'admin-auth' })
 

@@ -1,4 +1,4 @@
-// app/plugins/seo.defaults.client.ts (or server & client)
+// app/plugins/seo.defaults.client.ts
 import { useSchemaOrg } from '#imports'
 
 export default defineNuxtPlugin(() => {

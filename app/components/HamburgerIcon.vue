@@ -1,4 +1,4 @@
-<!-- components/SmartHamburger.vue -->
+<!-- app/components/HamburgerIcon.vue -->
 <template>
   <button
     ref="btn"

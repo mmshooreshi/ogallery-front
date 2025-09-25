@@ -1,4 +1,4 @@
-// prisma/seed.ts
+// scripts/seed-0.ts
 import { PrismaClient } from '@prisma/client'
 import argon2 from 'argon2'
 

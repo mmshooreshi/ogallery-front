@@ -1,1 +1,1 @@
-/// <reference types="node" />
+// env.d.ts

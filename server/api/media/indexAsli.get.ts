@@ -1,4 +1,4 @@
-// server/api/media/index.get.ts
+// server/api/media/indexAsli.get.ts
 import { ListObjectsV2Command } from '@aws-sdk/client-s3'
 import { s3 } from '../../lib/s3'
 import { prisma as db } from '../../lib/prisma'

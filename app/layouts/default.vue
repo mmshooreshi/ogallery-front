@@ -1,14 +1,9 @@
+<!-- app/layouts/default.vue -->
 <template>
   <div>
     <SiteHeader2 />
-  <!-- <HarvestToolbar v-if="$config.public.adminScrapeEnabled" /> -->
-    <!-- <HarvestMonitor :runId="runId" /> -->
 
-      <HarvestToolbar v-model:runId="runId"/>
-      <ClientOnly>
-      <HarvestMonitor :runId="runId"/>
-      </ClientOnly>
-    <main class="min-h-screen  pt-16 px-8">
+    <main class="min-h-screen  pt-16 px-0">
       <slot />
     </main>
 

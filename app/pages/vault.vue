@@ -1,3 +1,4 @@
+<!-- app/pages/vault.vue -->
 <template>
   <section>
     <h1 class="text-2xl font-semibold mb-4">Vault (Protected)</h1>

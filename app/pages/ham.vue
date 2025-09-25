@@ -1,3 +1,4 @@
+<!-- app/pages/ham.vue -->
 <script setup>
 import { ref } from 'vue'
 import HamburgerMenu from '@/components/HamburgerMenu.vue'

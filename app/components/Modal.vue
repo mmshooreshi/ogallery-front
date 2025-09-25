@@ -1,3 +1,4 @@
+<!-- app/components/Modal.vue -->
 <template>
   <div class="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm grid place-items-center " @click.self="$emit('cancel')">
     <div class="bg-white rounded-2xl shadow-xl w-[min(520px,92vw)] ">

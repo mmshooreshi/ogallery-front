@@ -1,3 +1,4 @@
+<!-- app/components/HamburgerMini.vue -->
 <template>
   <header ref="headerRef" class="hp-header">
     <button

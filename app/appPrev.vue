@@ -1,3 +1,4 @@
+<!-- app/appPrev.vue -->
 <template>
   <div>
     <NuxtRouteAnnouncer />

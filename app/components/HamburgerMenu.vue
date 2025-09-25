@@ -1,4 +1,4 @@
-<!-- HamburgerMenu.vue -->
+<!-- app/components/HamburgerMenu.vue -->
 <template>
   <button
     class="ham-btn"

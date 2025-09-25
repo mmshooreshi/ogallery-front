@@ -1,3 +1,4 @@
+<!-- app/components/AdminEditor.vue -->
 <script setup lang="ts">
 import { list, upsert, remove } from '@/utils/storage'
 

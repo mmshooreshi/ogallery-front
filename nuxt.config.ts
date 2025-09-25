@@ -17,10 +17,10 @@ export default defineNuxtConfig({
     i18n: {
     // Routing: / and /en for English, /fa for Persian
     strategy: 'prefix_and_default',
-    defaultLocale: 'en',
+    defaultLocale: 'EN',
     locales: [
-      { code: 'en', language: 'en-US', name: 'English', isCatchallLocale: true },
-      { code: 'fa', language: 'fa-IR', name: 'فارسی', dir: 'rtl' }
+      { code: 'EN', language: 'en-US', name: 'English', isCatchallLocale: true },
+      { code: 'FA', language: 'fa-IR', name: 'فارسی', dir: 'rtl' }
     ],
     // Needed for fully-qualified hreflang/canonical
     baseUrl: 'https://YOUR-DOMAIN.com',
@@ -134,6 +134,9 @@ export default defineNuxtConfig({
 nitro: {
   preset: 'vercel',
   routeRules: {
+          '/artists/dev': { swr: 60 },
+      '/artists/dev/**': { swr: 60 },
+
     '/sitemap.xml': { prerender: !import.meta.env?.VITEST },
     '/(artists|exhibitions|viewing-rooms|window|publications|news)(/**)?': {
       headers: { 'cache-control': 'public, max-age=300, stale-while-revalidate=86400' }
@@ -142,7 +145,8 @@ nitro: {
   },
   storage: {
     // lets server routes read/write under /content without node:fs
-    content: { driver: 'fs', base: 'content' }
+    cache: { driver: 'memory' },
+    // content: { driver: 'fs', base: 'content' }
   },
   prerender: {
     crawlLinks: process.env.VERCEL ? false : false,

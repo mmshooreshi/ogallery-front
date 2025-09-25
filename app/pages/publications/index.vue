@@ -1,3 +1,4 @@
+<!-- app/pages/publications/index.vue -->
 <script setup lang="ts">
 const { data } = await useAsyncData('publications', () =>
   queryCollection('publications').all()

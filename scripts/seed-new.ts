@@ -1,4 +1,4 @@
-// prisma/seed.ts
+// scripts/seed-new.ts
 import { prisma } from '../server/lib/prisma'
 import argon2 from 'argon2'
 

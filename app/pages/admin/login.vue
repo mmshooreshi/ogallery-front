@@ -1,3 +1,4 @@
+<!-- app/pages/admin/login.vue -->
 <template>
   <div class="min-h-screen grid place-items-center bg-[var(--ui-bg,#fafafa)] px-5">
     <section class="w-full max-w-md rounded-2xl border shadow-sm bg-white p-6">

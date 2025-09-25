@@ -1,3 +1,4 @@
+<!-- app/pages/exhibitions/index.vue -->
 <script setup lang="ts">
 const { data } = await useAsyncData('exhibitions', () =>
   queryCollection('exhibitions').all()

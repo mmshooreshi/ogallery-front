@@ -1,4 +1,4 @@
-<!-- app/components/SiteHeader.vue -->
+<!-- app/components/SiteHeader2.vue -->
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import HamburgerMenu from '@/components/HamburgerMenu.vue'
@@ -6,7 +6,7 @@ import HamburgerMenu from '@/components/HamburgerMenu.vue'
 
 const lp = useLocalePath()               // localized internal links
 const switchLocalePath = useSwitchLocalePath()
-const { locale } = useI18n()             // current locale code ('en' | 'fa')
+const { locale } = useI18n()             // current locale code ('EN' | 'FA')
 
 
 const open = ref(false)           // drawer open/close
@@ -83,11 +83,11 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside, 
       <!-- Language switch (hidden when search is open) -->
       <div class="flex items-center text-[#2d2d2d] text-[1rem] transition-opacity duration-200"
         :class="searchOpen ? 'opacity-0 pointer-events-none  md:pointer-events-auto' : 'opacity-90'">
-        <NuxtLink :to="switchLocalePath('en')" class="no-underline font-english"
-          :class="locale === 'en' ? 'text-[#ffde00]' : 'text-inherit'" aria-label="Switch to English">EN</NuxtLink>
+        <NuxtLink :to="switchLocalePath('EN')" class="no-underline font-english"
+          :class="locale === 'EN' ? 'text-[#ffde00]' : 'text-inherit'" aria-label="Switch to English">EN</NuxtLink>
         <span class="px-2 opacity-40">|</span>
-        <NuxtLink :to="switchLocalePath('fa')" class="no-underline font-persian"
-          :class="locale === 'fa' ? 'text-[#ffde00]' : 'text-inherit'" aria-label="Switch to Persian">فا</NuxtLink>
+        <NuxtLink :to="switchLocalePath('FA')" class="no-underline font-persian"
+          :class="locale === 'FA' ? 'text-[#ffde00]' : 'text-inherit'" aria-label="Switch to Persian">فا</NuxtLink>
       </div>
 
       <!-- Search toggle / field -->
@@ -100,7 +100,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside, 
   <!-- Expanding input (smooth width + opacity) -->
   <div
     class="mx-2 h-[36px] overflow-hidden  transition-all duration-300 ease-out"
-    :class="searchOpen ? 'w-[200px]' : 'w-0 opacity-0', locale === 'en' ? '-mr-10 ml-10' : '-ml-10 mr-10'"
+    :class="searchOpen ? 'w-[200px]' : 'w-0 opacity-0', locale === 'EN' ? '-mr-10 ml-10' : '-ml-10 mr-10'"
     :aria-hidden="searchOpen ? 'false' : 'true'"
   >
     <input

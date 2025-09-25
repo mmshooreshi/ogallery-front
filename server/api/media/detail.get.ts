@@ -1,3 +1,4 @@
+// server/api/media/detail.get.ts
 import { HeadObjectCommand } from '@aws-sdk/client-s3'
 import { s3 } from '../../lib/s3'
 import { prisma as db } from '../../lib/prisma'

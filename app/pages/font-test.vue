@@ -1,3 +1,4 @@
+<!-- app/pages/font-test.vue -->
 <script setup>
 </script>
 
