@@ -349,8 +349,9 @@ onMounted(()=> {
     if(k==='n'){ e.preventDefault(); openCreate() }
   }
   window.addEventListener('keydown', onKey)
-  onUnmounted(()=> window.removeEventListener('keydown', onKey))
+  
 })
+onUnmounted(()=> window.removeEventListener('keydown', onKey))
 
 /* toasts (inline) */
 type Toast = { id:number; msg:string; color:'gray'|'green'|'red' }
