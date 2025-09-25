@@ -10,6 +10,8 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.893.0",
+    "@aws-sdk/s3-request-presigner": "^3.893.0",
     "@nuxt/content": "3.6.3",
     "@nuxt/eslint": "1.9.0",
     "@nuxt/fonts": "0.11.4",
@@ -24,17 +26,32 @@
     "@unhead/vue": "^2.0.3",
     "@unocss/nuxt": "^66.5.1",
     "@vueuse/nuxt": "13.9.0",
+    "argon2": "^0.44.0",
+    "cheerio": "^1.1.2",
+    "embla-carousel-autoplay": "^8.6.0",
+    "embla-carousel-vue": "^8.6.0",
+    "express": "^5.1.0",
+    "fast-xml-parser": "^5.2.5",
+    "jose": "^6.1.0",
+    "jsdom": "^27.0.0",
+    "mime": "^4.1.0",
+    "nanoid": "^5.1.6",
     "nuxt": "^4.1.1",
+    "nuxt-storage": "^1.2.2",
+    "openai": "^5.23.0",
     "pinia": "^3.0.3",
     "typescript": "^5.6.3",
     "unocss": "^66.5.1",
     "vite-svg-loader": "^5.1.0",
     "vue": "^3.5.20",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "ws": "^8.18.3",
+    "zod": "^4.1.11"
   },
   "devDependencies": {
     "@nuxt/test-utils": "3.19.2",
     "eslint": "^9.0.0",
+    "tsx": "^4.20.5",
     "vitest": "^3.2.4"
   }
 }

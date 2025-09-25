@@ -32,6 +32,7 @@ export default defineNuxtConfig({
       alwaysRedirect: false
     }
   },
+  
   app: {
     head: {
       titleTemplate: '%s - OGallery',
@@ -100,10 +101,26 @@ export default defineNuxtConfig({
       '/api/sitemap/news'
     ]
   },
+
+
+  
     runtimeConfig: {
+      b2Region: process.env.B2_REGION,
+      b2Endpoint: process.env.B2_ENDPOINT,
+      b2KeyId: process.env.B2_KEY_ID,
+      b2AppKey: process.env.B2_APP_KEY,
+      b2Bucket: process.env.B2_BUCKET,
+      mediaSignTtl: Number(process.env.MEDIA_SIGN_TTL ?? 900), // seconds
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+      OPENAI_BASE_URL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+
     public: {
       // Optional: set if you deploy on a fixed origin; else we’ll auto-detect
-      siteUrl: '' // e.g. 'https://ogallery.net'
+      siteUrl: '', // e.g. 'https://ogallery.net'
+      adminScrapeEnabled:
+        process.env.NUXT_PUBLIC_ADMIN_SCRAPE_ENABLED === 'true' ||
+        process.env.NODE_ENV !== 'production',
+
     }
   },
 

@@ -1,0 +1,177 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Locale {
+  EN
+  FA
+}
+
+enum Status {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// --- Admin (minimal) ---
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  passwordHash String
+  role         String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  mediaCreated Media[]
+}
+
+// --- One table for all types (Artist, Exhibition, News, Studio, etc.) ---
+model Entry {
+  id        Int      @id @default(autoincrement())
+  kind      String
+  slug      String
+  status    Status   @default(DRAFT)
+
+  dates     Json?
+  props     Json?
+
+  seo       Json?
+  jsonld    Json?
+
+  coverMediaId Int?
+  coverMedia   Media? @relation("Entry_coverMedia", fields: [coverMediaId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  locales   EntryLocale[]
+  media     EntryMedia[]
+  linksFrom Link[] @relation("from")
+  linksTo   Link[] @relation("to")
+  tags      EntryTag[]
+
+  @@unique([kind, slug])
+  @@index([kind, status])
+  @@index([updatedAt])
+}
+
+// --- Localized fields only ---
+model EntryLocale {
+  id       Int     @id @default(autoincrement())
+  entryId  Int
+  locale   Locale
+
+  slug     String?
+  title    String?
+  subtitle String?
+  summary  String?
+  bodyHtml String?
+
+  seo      Json?   // localized override
+  jsonld   Json?   // localized override
+  data     Json?
+
+  entry    Entry   @relation(fields: [entryId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([entryId, locale])
+}
+
+// --- Media (rich, future-proof) ---
+
+model Media {
+  id         Int      @id @default(autoincrement())
+  url        String @unique
+  kind       String?
+  mime       String?
+  size       Int?
+  width      Int?
+  height     Int?
+  durationMs Int?
+  alt        String?
+  caption    String?
+  credit     String?
+  copyright  String?
+  variants   Json?
+  meta       Json?
+  isPublic   Boolean  @default(true)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  createdById Int?
+  createdBy  User?    @relation(fields: [createdById], references: [id])
+
+  // back-relations
+  coverForEntries Entry[] @relation("Entry_coverMedia")
+  links           EntryMedia[]
+}
+
+// link media to entries with roles + order; per-link meta (e.g., parsed dims/year)
+model EntryMedia {
+  id      Int    @id @default(autoincrement())
+  entryId Int
+  mediaId Int
+  role    String // "HERO" | "SELECTED_WORK" | "INSTALLATION" | "COVER" | ...
+  ord     Int?
+  meta    Json?  // { widthCm, heightCm, year, label, ... }
+
+  entry   Entry  @relation(fields: [entryId], references: [id])
+  media   Media  @relation(fields: [mediaId], references: [id])
+
+  @@unique([entryId, mediaId, role]) 
+  @@index([entryId, role, ord])
+  @@index([mediaId])
+}
+
+// --- Graph links between entries (Artist ↔ Exhibition, Related, etc.) ---
+model Link {
+  id     Int    @id @default(autoincrement())
+  fromId Int
+  toId   Int
+  role   String // "PARTICIPATES_IN" | "AUTHORED_BY" | "RELATED_TO" | ...
+  ord    Int?
+
+  from   Entry  @relation("from", fields: [fromId], references: [id])
+  to     Entry  @relation("to",   fields: [toId],   references: [id])
+
+  @@index([fromId, role, ord])
+  @@index([toId, role, ord])
+}
+
+// --- Simple taxonomy ---
+model Tag {
+  id     Int     @id @default(autoincrement())
+  slug   String
+  name   String
+  locale Locale?
+
+  entries EntryTag[]
+
+  @@unique([slug, locale])
+}
+
+model EntryTag {
+  entryId Int
+  tagId   Int
+  entry   Entry @relation(fields: [entryId], references: [id])
+  tag     Tag   @relation(fields: [tagId], references: [id])
+
+  @@id([entryId, tagId])
+}
+
+// --- Redirects (SEO) ---
+model UrlAlias {
+  id       Int      @id @default(autoincrement())
+  from     String   @unique
+  to       String
+  locale   Locale?
+  createdAt DateTime @default(now())
+}
