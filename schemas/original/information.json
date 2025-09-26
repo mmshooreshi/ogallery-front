@@ -1,0 +1,9 @@
+{
+  "informationPage": {
+    "header": ["status"],
+    "body": {
+      "status": "404",
+      "redirect_to": "https://ogallery.net/en/gallery"
+    }
+  }
+}

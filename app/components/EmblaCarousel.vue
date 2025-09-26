@@ -83,10 +83,10 @@ onBeforeUnmount(() => {
 
 <!-- Progress Indicators (clickable) -->
 <div
-  class="absolute left-0 right-0 flex w-max mx-auto justify-around gap-2 px-4"
+  class="absolute left-0 right-0 flex w-max mx-auto justify-around gap-1 sm:gap-2 px-0"
   style="bottom: 0rem"
 >
-<div   @click="goToSlide(i)" v-for="(_, i) in totalSlides" class="group cursor-pointer relative flex-1 py-2 w-[46px]">
+<div   @click="goToSlide(i)" v-for="(_, i) in totalSlides" class="group cursor-pointer relative flex-1 py-2 sm:w-[26px] sm:max-w-[36px]">
   <button
   
     :key="i"

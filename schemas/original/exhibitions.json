@@ -1,0 +1,16 @@
+{
+  "exhibitionsPage": {
+    "header": ["tabs_current_past"],
+    "body": {
+      "current": [
+        { "href": "url", "title": "text", "by": {"type": "text", "name": "text", "href": "url"}, "dates": "text", "thumb": "image" }
+      ],
+      "past": {
+        "year_nav": [ {"year": "text", "href": "url"} ],
+        "items": [
+          { "href": "url", "title": "text", "by": {"type": "text", "name": "text", "href": "url"}, "dates": "text", "thumb": "image" }
+        ]
+      }
+    }
+  }
+}

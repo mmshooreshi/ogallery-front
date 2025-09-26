@@ -1,0 +1,9 @@
+{
+  "publicationsPage": {
+    "header": ["title"],
+    "body": {
+      "items": [ {"href": "https://ogallery.net/en/publications/<slug>", "title": "text", "date": "text", "excerpt": "html", "thumb": "https://ogallery.net/files/<path-to-image>.jpg"} ]
+    }
+  }
+}
+

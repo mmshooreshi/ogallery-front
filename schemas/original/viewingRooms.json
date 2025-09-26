@@ -1,0 +1,13 @@
+{
+  "viewingRoomsPage": {
+    "header": ["tabs_past"],
+    "body": {
+      "past": {
+        "year_nav": [ {"year": "2020", "href": "https://ogallery.net/en/viewing-rooms/2020"}, {"year": "2021", "href": "https://ogallery.net/en/viewing-rooms/2021"}, {"year": "2022", "href": "https://ogallery.net/en/viewing-rooms/2022"} ],
+        "items": [
+          { "href": "https://ogallery.net/en/viewing-rooms/<slug>", "title": "text", "artist": {"name": "text", "href": "https://ogallery.net/en/artists/<slug>"}, "dates": "text", "thumb": "image" }
+        ]
+      }
+    }
+  }
+}

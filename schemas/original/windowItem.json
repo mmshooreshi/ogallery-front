@@ -1,0 +1,10 @@
+{
+  "windowItemPage": {
+    "header": {"title": "text", "dates": "text"},
+    "body": {
+      "press_release": "html",
+      "artist": {"name": "text", "href": "https://ogallery.net/en/artists/<slug>"},
+      "selected_works": [ {"id": "text", "title": "text", "year": "text", "medium": "text", "dimensions": "text", "availability": "text", "alt": "text", "src": "image", "view_in_room": "boolean"} ]
+    }
+  }
+}

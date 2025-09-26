@@ -1,0 +1,22 @@
+{
+  "studioPage": {
+    "header": {"title": "text"},
+    "body": {
+      "about": "html",
+      "programs": [
+        {
+          "title": "text",
+          "dates": "text",
+          "desc": "html",
+          "images": [ {"id": "text", "alt": "text", "src": "image", "credit": "text"} ]
+        }
+      ],
+      "residents": {
+        "current": [ {"name": "text", "href": "https://ogallery.net/en/artists/<slug>"} ],
+        "past"   : [ {"name": "text", "href": "https://ogallery.net/en/artists/<slug>"} ]
+      },
+      "gallery": [ {"id": "text", "alt": "text", "src": "image", "credit": "text"} ],
+      "apply": "https://ogallery.net/en/studio#apply"
+    }
+  }
+}

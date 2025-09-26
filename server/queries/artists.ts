@@ -2,7 +2,9 @@ import { prisma } from '~~/server/lib/prisma'
 import { Prisma } from '@prisma/client'
 import type { Locale } from '@prisma/client'
 
-// lightweight list
+/**
+ * Lightweight list of artists
+ */
 export async function listArtists(locale?: Locale) {
   const rows = await prisma.$queryRaw<
     { id: string; slug: string; title: string | null; url: string | null }[]
@@ -14,7 +16,7 @@ export async function listArtists(locale?: Locale) {
     FROM "Entry" e
     LEFT JOIN "EntryLocale" l
       ON l."entryId" = e.id
-     ${locale ? Prisma.sql`AND l.locale = ${locale}::"Locale"` : Prisma.empty}
+      ${locale ? Prisma.sql`AND l.locale = ${locale}::"Locale"` : Prisma.empty}
     LEFT JOIN "Media" m
       ON m.id = e."coverMediaId"
     WHERE e.kind = 'ARTIST'
@@ -30,72 +32,71 @@ export async function listArtists(locale?: Locale) {
   }))
 }
 
+/**
+ * Fetch full artist record with locales and media
+ */
 export async function getArtist(slug: string, locale?: Locale) {
-  const rows = await prisma.$queryRaw<
-    {
-      entry_id: string
-      entry_slug: string
-      locale: string | null
-      title: string | null
-      body: string | null
-      media_ord: number | null
-      media_role: string | null
-      media_url: string | null
-      media_kind: string | null
-      media_alt: string | null
-      media_caption: string | null
-    }[]
+  // 1. Fetch base artist record
+  const artist = await prisma.$queryRaw<
+    { id: string; slug: string }[]
   >(Prisma.sql`
-    SELECT e.id          AS entry_id,
-           e.slug        AS entry_slug,
-           l.locale      AS locale,
-           l.title       AS title,
-           l."bodyHtml"  AS body,
-           em.ord        AS media_ord,
-           em.role       AS media_role,
-           m.url         AS media_url,
-           m.kind        AS media_kind,
-           m.alt         AS media_alt,
-           m.caption     AS media_caption
+    SELECT e.id, e.slug
     FROM "Entry" e
-    LEFT JOIN "EntryLocale" l
-      ON l."entryId" = e.id
-     ${locale ? Prisma.sql`AND l.locale = ${locale}::"Locale"` : Prisma.empty}
-    LEFT JOIN "EntryMedia" em
-      ON em."entryId" = e.id
-    LEFT JOIN "Media" m
-      ON m.id = em."mediaId"
     WHERE e.kind = 'ARTIST'
       AND e.slug = ${slug}
       AND e.status = 'PUBLISHED'
+    LIMIT 1
+  `)
+
+  if (artist.length === 0) return null
+  const artistId = artist[0].id
+
+  // 2. Fetch locales without duplication
+  const locales = await prisma.$queryRaw<
+    { locale: string; title: string | null; bodyHtml: string | null }[]
+  >(Prisma.sql`
+    SELECT l.locale, l.title, l."bodyHtml"
+    FROM "EntryLocale" l
+    WHERE l."entryId" = ${artistId}
+      ${locale ? Prisma.sql`AND l.locale = ${locale}::"Locale"` : Prisma.empty}
+  `)
+
+  // 3. Fetch media ordered
+  const media = await prisma.$queryRaw<
+    {
+      ord: number
+      role: string
+      url: string
+      kind: string
+      alt: string | null
+      caption: string | null
+    }[]
+  >(Prisma.sql`
+    SELECT em.ord, em.role, m.url, m.kind, m.alt, m.caption
+    FROM "EntryMedia" em
+    INNER JOIN "Media" m ON m.id = em."mediaId"
+    WHERE em."entryId" = ${artistId}
     ORDER BY em.ord ASC
   `)
 
-  if (rows.length === 0) return null
-
-  const first = rows[0]
-
+  // 4. Combine final structured result
   return {
-    id: first.entry_id,
-    slug: first.entry_slug,
-    locales: rows
-      .filter(r => r.title !== null || r.body !== null)
-      .map(r => ({
-        locale: r.locale!,
-        title: r.title,
-        bodyHtml: r.body,
-      })),
-    media: rows
-      .filter(r => r.media_url !== null)
-      .map(r => ({
-        ord: r.media_ord!,
-        role: r.media_role,
-        media: {
-          url: r.media_url!,
-          kind: r.media_kind,
-          alt: r.media_alt,
-          caption: r.media_caption, 
-        },
-      })),
+    id: artistId,
+    slug: artist[0].slug,
+    locales: locales.map(l => ({
+      locale: l.locale,
+      title: l.title,
+      bodyHtml: l.bodyHtml,
+    })),
+    media: media.map(m => ({
+      ord: m.ord,
+      role: m.role,
+      media: {
+        url: m.url,
+        kind: m.kind,
+        alt: m.alt,
+        caption: m.caption,
+      },
+    })),
   }
 }

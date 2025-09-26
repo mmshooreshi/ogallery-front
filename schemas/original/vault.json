@@ -1,0 +1,21 @@
+{
+ "vaultPage": {
+  "header": {"title": "text"},
+  "body": {
+   "access": {"prompt": "text", "password_input": true, "cta": "View Work"},
+   "works": [
+    {
+     "id": "text",
+     "artist": {"name": "text", "href": "https://ogallery.net/en/artists/<slug>"},
+     "title": "text",
+     "year": "text",
+     "medium": "text",
+     "dimensions": "text",
+     "price": "text",
+     "availability": "text",
+     "images": [ {"id": "text", "alt": "text", "src": "image", "credit": "text"} ]
+    }
+   ]
+  }
+ }
+}

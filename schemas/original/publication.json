@@ -1,0 +1,12 @@
+{
+  "publicationPage": {
+    "header": {"title": "text", "date": "text"},
+    "body": {
+      "lead": "html",
+      "cover": "https://ogallery.net/files/Statics/uploads/publications/Annual/featuredimage-List.jpg",
+      "download_pdf": "https://ogallery.net/files/Statics/uploads/publications/Annual/OGallery-AnnualReport-2023-2024..pdf",
+      "content": "html",
+      "images": [ {"id": "text", "alt": "text", "src": "https://ogallery.net/files/<path-to-image>.jpg", "credit": "text"} ]
+    }
+  }
+}

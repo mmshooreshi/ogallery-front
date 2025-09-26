@@ -1,0 +1,9 @@
+{
+  "newsPage": {
+    "header": ["tabs_all_artist_gallery_fairs"],
+    "body": {
+      "items"   : [ {"href": "https://ogallery.net/en/news/<slug>", "title": "text", "date": "text", "excerpt": "html", "thumb": "https://ogallery.net/files/<path-to-image>.jpg"}                                                     ],
+      "pagination": [ "https://ogallery.net/en/news",                                                                 "https://ogallery.net/en/news/1", "https://ogallery.net/en/news/2", "https://ogallery.net/en/news/3" ]
+    }
+  }
+}

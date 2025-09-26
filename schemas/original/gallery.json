@@ -1,0 +1,25 @@
+{
+  "galleryPage": {
+    "header": { "tabs": ["About", "Hours", "Map", "Contact", "Subscribe"] },
+    "body": {
+      "about": "html",
+      "hours": [
+        "Monday – Thursday 12 – 8 pm",
+        "Friday 4 – 9 pm",
+        "Closed on Saturdays and Sundays."
+      ],
+      "map": {
+        "image": "https://ogallery.net/files/Statics/uploads/2019/12/map.png"
+      },
+      "contact": {
+        "address": "18 Shahin (Khedri) St., Sanaee St., Tehran, Iran 1585893751",
+        "phone": "(+9821)88324828",
+        "email": "mailto:info@ogallery.net"
+      },
+      "subscribe": {
+        "fields": ["first_name", "last_name", "email", "country", "organization", "job_title"],
+        "action": "https://ogallery.net/en/gallery#subscribe"
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "newsItemPage": {
+    "header": {"title": "text", "dates": "text"},
+    "body": {
+      "attending_artists": [ {"name": "text", "href": "https://ogallery.net/en/artists/<slug>"} ],
+      "press_release": "html",
+      "links": [ {"label": "More on <artist>", "href": "https://ogallery.net/en/artists/<slug>"} ],
+      "images": [ {"id": "text", "alt": "text", "src": "https://ogallery.net/files/<path-to-image>.jpg", "credit": "text"} ]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "exhibitionPage": {
+    "header": {
+      "title": "text",
+      "artists": [ {"name": "text", "href": "url"} ],
+      "dates": "text"
+    },
+    "body": {
+      "press_release": "html",
+      "selected_works": [ {"id": "text", "title": "text", "year": "text", "medium": "text", "dimensions": "text", "artist": "text", "alt": "text", "src": "image", "credit": "text"} ],
+      "installation_views": [ {"id": "text", "alt": "text", "src": "image", "credit": "text"} ]
+    }
+  }
+}

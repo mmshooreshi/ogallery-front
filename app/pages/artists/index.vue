@@ -5,9 +5,10 @@ type ArtistListItem = { id: number; slug: string; name: string; image: string | 
 
 const { locale } = useI18n()
 const route = useRoute()
+const key  = computed(() => `artists:${locale.value}`)
 
 const { data: artists, pending, error } = useLocalCache<ArtistListItem[]>(
-  () => `artists:${locale.value}`,
+  () => key.value,
   () => $fetch<any>('/_q/artists', { query: { locale: locale.value } }),
   { ttlMs: 60_000, swr: true, initial: [] }
 )
@@ -62,7 +63,7 @@ useSeoMeta({ title: 'Artists' })
       <p v-else class="opacity-70">No artists found.</p>
 
       <div v-if="pending" class="absolute bottom-6 py-0 text-black/70 bg-yellow-500/60 px-2 ">Refreshing…</div>
-      <div v-else-if="error" class="text-red-600">Error loading. Showing cache.</div>
+      <div v-else-if="error" class="absolute bottom-6 py-0 text-red-800/80 bg-red-500/60 px-2">Error loading. Showing cache.</div>
 
     </ClientOnly>
   </section>

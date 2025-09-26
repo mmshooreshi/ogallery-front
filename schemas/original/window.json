@@ -1,0 +1,14 @@
+{
+  "windowPage": {
+    "header": ["tabs_current_past"],
+    "body": {
+      "current": [ {"href": "https://ogallery.net/en/window/<slug>", "title": "text", "dates": "text", "thumb": "image"} ],
+      "past": {
+        "year_nav": [ {"year": "2023", "href": "https://ogallery.net/en/window/2023"}, {"year": "2024", "href": "https://ogallery.net/en/window/2024"}, {"year": "2025", "href": "https://ogallery.net/en/window/2025"} ],
+        "items": [
+          { "href": "https://ogallery.net/en/window/<slug>", "title": "text", "artist": {"name": "text", "href": "https://ogallery.net/en/artists/<slug>"}, "dates": "text", "thumb": "image" }
+        ]
+      }
+    }
+  }
+}

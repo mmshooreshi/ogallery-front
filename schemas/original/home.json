@@ -1,0 +1,31 @@
+{
+  "homePage": {
+    "header": {
+      "hero": {
+        "slides": [
+          {
+            "artist": { "name": "text", "href": "https://ogallery.net/en/artists/<slug>" },
+            "exhibition": { "title": "text", "href": "https://ogallery.net/en/exhibitions/<slug>" },
+            "dates": "text",
+            "image": "image"
+          }
+        ]
+      }
+    },
+    "body": {
+      "news": [
+        {
+          "href": "https://ogallery.net/en/news/<slug>",
+          "title": "text",
+          "date": "text",
+          "excerpt": "html",
+          "artists": [
+            { "name": "text", "href": "https://ogallery.net/en/artists/<slug>" }
+          ],
+          "thumb": "image"
+        }
+      ],
+      "newsletter_cta": "https://ogallery.net/en/gallery#subscribe"
+    }
+  }
+}

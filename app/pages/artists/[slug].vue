@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { useLocalCache } from '~/composables/useLocalCache'
-import GalleryLightbox from '~/components/GalleryLightBox.vue'
 
+interface MediaItem {
+    id: string;
+    role: string;
+    media: { url: string, alt?: string, caption?: string };
+}
+
+interface Artist {
+    media?: MediaItem[];
+}
 
 const LBL = '[artists/[slug]]'
 const log  = (...a:any[]) => console.log(LBL, ...a)
@@ -9,14 +17,14 @@ const log  = (...a:any[]) => console.log(LBL, ...a)
 const route = useRoute()
 const { locale } = useI18n()
 const slug = computed(() => String(route.params.slug))
-const key  = computed(() => `artist-${locale.value}-${slug.value}`)
+const key  = computed(() => `artist:${locale.value}-${slug.value}`)
 
-const { data: artist, pending, error } = useLocalCache(
+const { data: artist, pending, error } = useLocalCache<Artist>(
   () => key.value,
-  () => $fetch(`/_q/artists/${encodeURIComponent(slug.value)}`, {
+  () => $fetch<any>(`/_q/artists/${encodeURIComponent(slug.value)}`, {
     query: { locale: locale.value },
   }),
-  { ttlMs: 60_000, swr: true },
+  { ttlMs: 60_000, swr: true, initial: {} as Artist },
 )
 
 const showLightbox = ref(false)
@@ -39,24 +47,24 @@ const selectedWorks = computed(() =>
 </script>
 
 <template>
-  <section class="px-8">
+  <section class="px-0">
     <!-- Fixed Artist Header -->
     <div
       id="artist-header"
       class="fixed top-[60px] left-0 right-0 bg-white border-b border-gray-200 z-50"
     >
       <div
-        class="max-w-screen-md mx-auto flex flex-col md:flex-row items-start md:items-center justify-between px-6 py-3"
+        class="max-w-screen-md mx-auto flex flex-col md:flex-row items-start md:items-center justify-between px-4 sm:px-4 py-3"
       >
-        <div class="flex justify-between items-center w-full">
-          <h1 class="text-xl md:text-2xl uppercase !font-light text-gray-700/80">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full">
+          <h1 class="text-xl md:text-2xl uppercase !font-light text-gray-700/80 text-nowrap">
             {{ loc?.title || 'Artist' }}
           </h1>
-          <nav class="flex flex-wrap gap-2 text-sm md:text-base uppercase">
+          <nav class="flex flex-wrap flex-row  sm:w-max mx-auto sm:mr-0  gap-2 sm:gap-4 text-xs sm:text-sm md:text-base uppercase">
             <a href="#bio" class="no-underline tracking-tight text-gray-700 hover:text-yellow-500 transition">Biography</a>
-            <span class="hidden md:inline">|</span>
+            <span class=" text-black/60 inline">|</span>
             <a href="#works" class="no-underline tracking-tight text-gray-700 hover:text-yellow-500 transition">Selected Works</a>
-            <span class="hidden md:inline">|</span>
+            <span class=" text-black/60 inline">|</span>
             <a href="#installation" class="no-underline tracking-tight text-gray-700 hover:text-yellow-500 transition">Installation Views</a>
           </nav>
         </div>
@@ -64,12 +72,10 @@ const selectedWorks = computed(() =>
     </div>
 
     <!-- Push content below fixed header -->
-    <div class="pt-20  max-w-screen-md mx-auto px-8">
+    <div class="pt-24 md:pt-20  max-w-screen-md mx-auto px-4">
 
-      <div v-if="pending" class="w-max py-0 mt-4 text-white bg-gray-500/30 px-2 ">Loading…</div>
-      <div v-else-if="error" class="text-red-600">Error loading artist.</div>
 
-      <article v-else-if="artist">
+      <article v-if="artist">
         <!-- BIO + CV -->
         <div id="bio" class="flex items-center justify-between mb-4">
           <div class="text-[23px] !font-thin uppercase tracking-tight text-gray-800/80">Bio</div>
@@ -95,7 +101,7 @@ const selectedWorks = computed(() =>
     <!-- Selected Works -->
     <section id="works" v-if="selectedWorks" class="mt-12 scroll-mt-20">
         <h2 class="text-2xl !font-light text-gray-700/90 mb-4 uppercase tracking-tight">Selected Works</h2>
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div
             v-for="(m, i) in selectedWorks"
             :key="m.media.url"
@@ -134,11 +140,23 @@ const selectedWorks = computed(() =>
         <NuxtLink to="/artists" class="text-sm underline hover:text-yellow-500 transition">← All artists</NuxtLink>
       </footer>
     </div>
+          <div v-if="pending" class="absolute bottom-6 py-0 text-black/70 bg-yellow-500/60 px-2 ">Loading…</div>
+      <div v-else-if="error" class="absolute bottom-6 py-0 text-red-800/80 bg-red-500/60 px-2 ">Error loading artist.</div>
+
   </section>
 </template>
 
 <style scoped>
+/* Default style for larger screens */
 #bio, #works, #installation {
   scroll-margin-top: 160px; /* your header height + a bit of padding */
 }
+
+/* Style for mobile devices */
+@media (max-width: 767px) {
+  #bio, #works, #installation {
+    scroll-margin-top: 160px;
+  }
+}
+
 </style>

@@ -1,7 +1,15 @@
 // nuxt.config.ts
+import vueDevTools from 'vite-plugin-vue-devtools'
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  vite: {
+  plugins: [
+    vueDevTools(),
+  ],
+  },
+
 
   // Used by @nuxtjs/sitemap & @nuxtjs/robots
   site: {
@@ -24,7 +32,7 @@ export default defineNuxtConfig({
       { code: 'FA', language: 'fa-IR', name: 'فارسی', dir: 'rtl' }
     ],
     // Needed for fully-qualified hreflang/canonical
-    baseUrl: 'https://YOUR-DOMAIN.com',
+    baseUrl: 'https://ogallery.net',
     // Optional but recommended: don’t force browser-redirect except on root
     detectBrowserLanguage: {
       useCookie: true,
@@ -135,8 +143,8 @@ export default defineNuxtConfig({
 nitro: {
   preset: 'vercel',
   routeRules: {
-          '/artists/dev': { swr: 60 },
-      '/artists/dev/**': { swr: 60 },
+          '/artists': { swr: 60 },
+      '/artists/**': { swr: 60 },
 
     '/sitemap.xml': { prerender: !import.meta.env?.VITEST },
     '/(artists|exhibitions|viewing-rooms|window|publications|news)(/**)?': {
@@ -152,7 +160,7 @@ nitro: {
   prerender: {
     crawlLinks: process.env.VERCEL ? false : false,
     routes: import.meta.env?.VITEST ? [] : [
-       '/sitemap.xml','/'
+       '/sitemap.xml','/','/artists','/artists/**'
       // '/', '/artists', '/exhibitions', '/viewing-rooms', '/window',
       // '/publications', '/news', '/studio', '/gallery', '/sitemap.xml'
     ]

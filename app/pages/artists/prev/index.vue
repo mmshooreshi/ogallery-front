@@ -3,7 +3,7 @@
 const locale = useState<'EN' | 'FA'>('locale')
 
 const { data, pending, error } = await useFetch('/api/artists', {
-  key: computed(() => `artists-${locale.value}`),
+  // key: computed(() => `artists-${locale.value}`),
   query: () => ({ locale: locale.value }),
   watch: [locale],
   default: () => [],

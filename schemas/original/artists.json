@@ -1,0 +1,24 @@
+{
+  "artistsPage": {
+    "header": ["title"],
+    "body": {
+      "represented_artists": {
+        "groups": [
+          {
+            "letter": "A-Z",
+            "items": [ {"name": "text", "href": "https://ogallery.net/en/artists/<slug>"} ]
+          }
+        ]
+      },
+      "exhibited_artists": {
+        "title": "Exhibited Artists",
+        "groups": [
+          {
+            "letter": "#/A-Z",
+            "items": [ {"name": "text", "href": "https://ogallery.net/en/artists/<slug>"} ]
+          }
+        ]
+      }
+    }
+  }
+}
