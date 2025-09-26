@@ -1,6 +1,6 @@
 <!-- app/pages/admin/login.vue -->
 <template>
-  <div class="min-h-screen grid place-items-center bg-[var(--ui-bg,#fafafa)] px-5">
+  <div class="min-h-[100dvh] grid place-items-center bg-[var(--ui-bg,#fafafa)] px-5">
     <section class="w-full max-w-md rounded-2xl border shadow-sm bg-white p-6">
       <header class="mb-5">
         <h1 class="text-2xl font-semibold tracking-tight">Sign in to Admin</h1>

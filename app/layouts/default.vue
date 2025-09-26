@@ -3,7 +3,7 @@
   <div class="fixMobileSelect">
     <SiteHeader2 />
 
-    <main class="min-h-screen  pt-16 px-0">
+    <main class="min-h-[100dvh]  pt-16 px-0">
       <slot />
     </main>
 

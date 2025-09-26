@@ -17,8 +17,13 @@ export default defineNuxtConfig({
     name: 'OGallery'
   },
 
-  modules: ['@nuxt/content', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', // Nuxt 4-compatible
+  modules: [    '@wgr-sa/nuxt-panzoom'
+,'@nuxt/content', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', // Nuxt 4-compatible
   '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', '@nuxt/fonts', '@nuxtjs/sitemap', '@nuxtjs/robots', '@nuxtjs/seo', '@unocss/nuxt', '@nuxtjs/i18n'],
+  
+    panzoom: {
+    addControls: true, // Add PanzoomControls component 
+  },
   css: [
     '@/assets/css/fonts.css',
     '@/assets/css/fix.css'

@@ -19,7 +19,7 @@ const open8 = ref(false)
 <div class="w-screen h-[65px]">
   <SiteHeader2/>
 </div>
-<div class="bg-black h-screen">
+<div class="bg-black h-[100dvh]">
     body
 </div>
  <!-- <div class="bg-red"> salam</div> -->

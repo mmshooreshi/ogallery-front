@@ -1,6 +1,6 @@
 <!-- app/pages/admin/media.vue -->
 <template>
-  <div class="min-h-screen flex bg-[var(--ui-bg,#f6f7f9)] text-[var(--ui-fg,#111)]" @keydown.esc="closeAllOverlays">
+  <div class="min-h-[100dvh] flex bg-[var(--ui-bg,#f6f7f9)] text-[var(--ui-fg,#111)]" @keydown.esc="closeAllOverlays">
     <!-- Sidebar -->
     <aside :class="['fixed inset-y-0 left-0 z-30 w-72 border-r bg-white shadow-sm transition-transform',
                    open ? 'translate-x-0' : '-translate-x-full', 'md:static md:translate-x-0']">

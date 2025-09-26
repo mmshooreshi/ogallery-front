@@ -347,7 +347,7 @@ EOF
 # admin login
 cat > app/pages/admin/login.vue <<'EOF'
 <template>
-  <div class="min-h-screen grid place-items-center p-6">
+  <div class="min-h-[100dvh] grid place-items-center p-6">
     <form @submit.prevent="onSubmit" class="w-full max-w-sm border rounded-2xl p-6 shadow">
       <h1 class="text-2xl font-semibold mb-4">Admin Login</h1>
       <label class="block text-sm mb-2">Password</label>
@@ -373,7 +373,7 @@ EOF
 # admin dashboard
 cat > app/pages/admin/index.vue <<'EOF'
 <template>
-  <div class="min-h-screen p-6">
+  <div class="min-h-[100dvh] p-6">
     <header class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-semibold">Admin Dashboard</h1>
       <div class="flex gap-2">

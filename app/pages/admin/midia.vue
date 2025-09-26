@@ -1,6 +1,6 @@
 <!-- app/pages/admin/midia.vue -->
 <template>
-  <div class="min-h-screen bg-[var(--ui-bg,#f6f7f9)] text-[var(--ui-fg,#111)]">
+  <div class="min-h-[100dvh] bg-[var(--ui-bg,#f6f7f9)] text-[var(--ui-fg,#111)]">
     <!-- Header -->
     <header class="sticky top-0 z-20 bg-white/90 backdrop-blur border-b">
       <div class="h-14 flex items-center gap-3 px-4">

@@ -1,6 +1,6 @@
 <!-- app/pages/admin/index.vue -->
 <template>
-  <div class="min-h-screen flex bg-[var(--ui-bg,#f6f7f9)] text-[var(--ui-fg,#111)]">
+  <div class="min-h-[100dvh] flex bg-[var(--ui-bg,#f6f7f9)] text-[var(--ui-fg,#111)]">
     <!-- Sidebar -->
     <aside
       :class="['fixed inset-y-0 left-0 z-40 w-72 border-r bg-white shadow-sm transition-transform',

@@ -18,20 +18,43 @@ function prev() {
 function goTo(i: number) {
   currentIndex.value = i
 }
+
+const zoomRef = ref()
+
 </script>
 
 <template>
-  
+
   <div
-    class="fixed inset-0 z-[9999] bg-black/00 flex flex-col items-center justify-center"
+    class="fixed inset-0  z-10  bg-black/00 flex flex-col items-center justify-center"
   >
-  <div class="GalleryBackdrop"></div>
     <!-- Close button -->
 
+    <div class="GalleryBackdrop"></div>
 
-        <button
+     
+
+
+    <!-- Big Image -->
+    <div class="flex-1 flex flex-col gap-2 items-center justify-center w-full px-4 h-[500px]   mb-44 pt-24 fixed">
+
+      <NuxtImg
+        :src="slides[currentIndex]?.media.url"
+        :alt="slides[currentIndex]?.media.alt || ''" 
+        class="h-full object-center object-contain max-w-[90vw] "
+      />
+
+
+      <div class="max-w-screen  text-black/80 font-medium text-md overflow-auto mx-3 fixed bottom-[10vh]  h-92px flex items-end pb-2 left-0" style="overflow-wrap: anywhere;"> 
+        <!-- {{slides[currentIndex]}} -->
+         {{slides[currentIndex]?.media?.caption}} 
+    
+    </div>
+    </div>
+
+       <button
         @click="$emit('close')"
-      class="absolute bg-black/0   border-0 hover:bg-black/0 group cursor-pointer transition-all  right-4 top-0 text-black/50 hover:text-black text-4xl"
+      class="absolute bg-black/0 mt-20  border-0 hover:bg-black/0 group cursor-pointer transition-all  right-4 top-0 text-black/50 hover:text-black text-4xl"
     >
         <div class="group-hover:scale-120  transition-all">
       ×
@@ -39,29 +62,13 @@ function goTo(i: number) {
 
       
     </button>
-
-
-    <!-- Big Image -->
-    <div class="flex-1 flex flex-col gap-2 items-center justify-center w-full px-4">
-      <NuxtImg
-        :src="slides[currentIndex]?.media.url"
-        :alt="slides[currentIndex]?.media.alt || ''"
-        class="max-h-[80vh] max-w-full object-contain"
-      />
-      <div class="max-w-md mx-auto text-black mx-4 " style="overflow-wrap: anywhere;"> 
-        <!-- {{slides[currentIndex]}} -->
-         {{slides[currentIndex]?.media?.caption}}
-    
-    </div>
-    </div>
-
     <!-- Prev/Next arrows -->
     <button
       @click="prev"
       class="overflow-visible absolute bg-black/00  border-0 hover:bg-black/0 group cursor-pointer transition-all pt-0 pb-2  hover:pr-5 px-4 hover:left-0 left-1 top-1/2 -translate-y-1/2 text-black/50 hover:text-black text-4xl"
     >
     <!-- ➔ -->
-    <div class="group-hover:scale-120 group-hover:-translate-x-1 transition-all">
+    <div class="group-hover:scale-120 group-hover:-translate-x-1 transition-all z-10">
       <!-- <svg viewBox="0 0 28 23" xmlns="http://www.w3.org/2000/svg"><path d="M3.69542 10.7505L28 10.7505L28 12.2505L3.69631 12.2505L12.5549 21.9911L11.4451 23.0003L1.44515 12.0046L0.986226 11.5L1.44515 10.9954L11.4451 -0.000306623L12.5549 1.00892L3.69542 10.7505Z"></path></svg> -->
        ←
     </div>
@@ -79,11 +86,11 @@ function goTo(i: number) {
     </button>
 
     <!-- Thumbnail strip -->
-    <div class="flex gap-2  px-2 py-2 bg-black/10 max-w-screen overflow-x-auto ">
+    <div class="flex gap-2 h-[10vh] px-2 py-2 bg-black/10 max-w-screen overflow-x-auto z-10 fixed bottom-0 ">
       <div
         v-for="(s, i) in slides"
         :key="s.id"
-        class="cursor-pointer h-16 outline-solid outline-2  text-white"
+        class="cursor-pointer h-14s outline-solid outline-2  text-white"
         :class="i === currentIndex ? 'outline-yellow-500' : 'outline-transparent'"
         @click="goTo(i)"
       >
@@ -91,7 +98,7 @@ function goTo(i: number) {
         <NuxtImg
           :src="s.media.url"
           :alt="s.media.alt || ''"
-          class="h-16 min-w-16 object-cover"
+          class="h-15 min-w-15 object-contain"
         />
       </div>
     </div>
@@ -105,11 +112,11 @@ function goTo(i: number) {
 <style scoped>
 .GalleryBackdrop{
     position: fixed;
+    inset: 0;
     top: 0;
     left: 0;
     bottom: 0;
     right: 0;
-    z-index: -1;
     background: white;
     /* background: rgba(255, 255, 255, 0.881); */
     /* backdrop-filter: blur(15px); */

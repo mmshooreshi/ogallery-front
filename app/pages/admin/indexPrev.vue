@@ -100,7 +100,7 @@ const studioFields = [
 </script>
 
 <template>
-  <div class="min-h-screen p-6">
+  <div class="min-h-[100dvh] p-6">
     <header class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-semibold">Admin Dashboard</h1>
       <div class="flex gap-2">
