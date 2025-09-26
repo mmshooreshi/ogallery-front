@@ -143,11 +143,11 @@ export default defineNuxtConfig({
 nitro: {
   preset: 'vercel',
   routeRules: {
-          '/artists': { swr: 60 },
+          // '/artists': { swr: 60 },
       '/artists/**': { swr: 60 },
 
     '/sitemap.xml': { prerender: !import.meta.env?.VITEST },
-    '/(artists|exhibitions|viewing-rooms|window|publications|news)(/**)?': {
+    '/(exhibitions|viewing-rooms|window|publications|news)(/**)?': {
       headers: { 'cache-control': 'public, max-age=300, stale-while-revalidate=86400' }
     }
     
@@ -160,7 +160,10 @@ nitro: {
   prerender: {
     crawlLinks: process.env.VERCEL ? false : false,
     routes: import.meta.env?.VITEST ? [] : [
-       '/sitemap.xml','/','/artists','/artists/**'
+    '/',
+    '/sitemap.xml',
+    // '/artists/**',
+
       // '/', '/artists', '/exhibitions', '/viewing-rooms', '/window',
       // '/publications', '/news', '/studio', '/gallery', '/sitemap.xml'
     ]
