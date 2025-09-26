@@ -8,7 +8,6 @@ const lp = useLocalePath()               // localized internal links
 const switchLocalePath = useSwitchLocalePath()
 const { locale } = useI18n()             // current locale code ('EN' | 'FA')
 
-
 const open = ref(false)           // drawer open/close
 const searchOpen = ref(false)     // search box open/close
 function toggle() { open.value = !open.value }
@@ -48,8 +47,31 @@ function handleClickOutside(e: MouseEvent) {
   if (el && !el.contains(e.target as Node)) closeSearch()
 }
 
+function delayedClose(delay: number) {
+  setTimeout(() => {
+    close()
+  }, delay) // wait 500ms before closing
+}
+
+const hover = ref(false)
+const onTouchTapStyleToggle = () => { hover.value = !hover.value; };
+
 onMounted(() => document.addEventListener('click', handleClickOutside, true))
 onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside, true))
+
+const route = useRoute()
+const computedTarget = ref(route.fullPath)
+
+
+watch(
+  () => route.fullPath,
+  () => {
+
+    computedTarget.value = route.fullPath;
+    
+    delayedClose(0)
+  }
+)
 
 
 
@@ -57,7 +79,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside, 
 
 <template>
   <header
-    class="fixed top-0 inset-x-0 z-40 w-full h-[60px] my-[2.5px] bg-white/80 border-b border-black/8 flex items-center">
+    class="!select-none fixed top-0 inset-x-0 z-40 w-full h-[60px] my-[2.5px] bg-white/80 border-b border-black/8 flex items-center">
     <!-- Left: Hamburger (60x60) -->
     <!-- <button
       class="w-[60px] h-[60px] flex items-center justify-center appearance-none border-none bg-transparent cursor-pointer text-[#595a5c]"
@@ -66,7 +88,6 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside, 
     >
     </button> -->
     <HamburgerMenu v-model="open" variant="ham1" :size="60" color="#595a5c" :stroke-width="3.5" />
-
 
     <!-- Logo (hidden when search is open) -->
     <NuxtLink to="/" aria-label="OGallery"
@@ -83,11 +104,11 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside, 
       <!-- Language switch (hidden when search is open) -->
       <div class="flex items-center text-[#2d2d2d] text-[1rem] transition-opacity duration-200"
         :class="searchOpen ? 'opacity-0 pointer-events-none  md:pointer-events-auto' : 'opacity-90'">
-        <NuxtLink :to="switchLocalePath('EN')" class="no-underline font-english"
-          :class="locale === 'EN' ? 'text-[#ffde00]' : 'text-inherit'" aria-label="Switch to English">EN</NuxtLink>
+        <NuxtLink :to="switchLocalePath('EN')" class="no-underline font-english" @touchstart="onTouchTapStyleToggle" @touchend="onTouchTapStyleToggle"
+          :class="[locale === 'EN' ? 'text-[#ffde00]]' : 'text-inherit', {active: hover}]" aria-label="Switch to English">EN</NuxtLink>
         <span class="px-2 opacity-40">|</span>
-        <NuxtLink :to="switchLocalePath('FA')" class="no-underline font-persian"
-          :class="locale === 'FA' ? 'text-[#ffde00]' : 'text-inherit'" aria-label="Switch to Persian">فا</NuxtLink>
+        <NuxtLink :to="switchLocalePath('FA')" class="no-underline font-persian" @touchstart="onTouchTapStyleToggle" @touchend="onTouchTapStyleToggle"
+          :class="[locale === 'FA' ? 'text-[#ffde00]' : 'text-inherit', {active: hover}]" aria-label="Switch to Persian">فا</NuxtLink>
       </div>
 
       <!-- Search toggle / field -->
@@ -132,16 +153,16 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside, 
     </div>
 
     <!-- Off-canvas overlay -->
-    <div class="fixed left-0 right-0 bottom-0 top-0 bg-black/0 transition-opacity duration-200 -z-100"
-      :class="open ? 'pointer-events-auto' : 'pointer-events-none'" @click.self="close">
+    <div class="fixed left-0 right-0 bottom-0 top-0 bg-black/0 transition-opacity duration-200  -z-10"
+      :class="open ? '!pointer-events-auto' : 'pointer-events-none'" @click.self="close">
       <!-- :class="open ? 'opacity-100 pointer-events-auto' : 'opacity-100 pointer-events-none'" -->
 
 
       <!-- Panel -->
       <!-- w-[82vw] max-w-[300px] -->
 
-      <nav class="absolute p-1 left-0 inset-y-0 bg-white w-screen flex flex-col transs"
-        :class="open ? 'translate-y-0' : '-translate-y-full'" role="dialog" aria-modal="true" aria-label="Main Menu">
+      <nav   :class="open ? 'translate-y-0 max-h-screen' : 'translate-y-0 max-h-0'"  class="absolute  p-1 left-0 inset-y-0 bg-white w-screen flex flex-col transs"
+      role="dialog" aria-modal="true" aria-label="Main Menu">
         <!-- <div class="flex items-center justify-between px-3 py-3 border-b border-black/8">
           <NuxtLink to="/" class="flex items-center gap-2 no-underline text-[#2d2d2d] font-600" @click="close">
             <img src="/ogallery-logo.svg" alt="" class="h-7 w-7" />
@@ -156,12 +177,15 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside, 
 
         <!-- <ul class="list-none py-[1px] px-[5px] m-0 p-0 mt-[56px]">
           <li v-for="l in links" :key="l.to"> -->
-
-        <ul class="list-none py-[1px] px-[5px] m-0 p-0 mt-[56px]" :class="open ? 'menu-open' : 'menu-close'">
-          <li v-for="(l, i) in links" :key="l.to" class="menu-item" :style="{ '--i': i }">
-            <NuxtLink :to="lp(l.to)" @click="close"
-              class="uppercase block py-[1px] px-[5px] w-max pr-8 no-underline font-light text-[1.4rem] text-[#1e1e1e]/70 rounded-lg  hover:text-[#ffde00] transition-colors duration-200 upp">
+            
+            <!-- {{ computedTarget }} -->
+        <ul class="list-none pt-[56px] px-[5px] m-0 p-0 mt-[0px]" :class="open ? 'menu-open' : 'menu-close'">
+          <li v-for="(l, i) in links" :key="l.to" class="menu-item" :style="{ '--i': i, '--inv-i': links.length - i -1 }">
+            <NuxtLink :to="lp(l.to)" @click="computedTarget=l.to"
+              :class="[computedTarget == l.to ? 'text-[#ffde00]' : '']"
+              class="uppercase block py-[1px] px-[5px] w-max pr-8 no-underline font-light text-[1.4rem] text-[#1e1e1e]/70 rounded-lg  hover:text-[#ffde00] upp transition-colors duration-200" > 
               {{ l.label }}
+              
             </NuxtLink>
           </li>
         </ul>
@@ -172,31 +196,42 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside, 
 
 <style>
 .transs {
-  transition: transform 0.5s ease-in-out, -webkit-transform .5s ease-in-out, opacity 0.1s ease;
+  /* Use hardware-accelerated transform for smooth sliding */
+  will-change: transform, max-height, opacity;
+  transition:
+    transform 0.5s ease-in-out,
+    max-height 1s cubic-bezier(.29,.54,0,1.16),
+    opacity 0.3s ease;
+  overflow: hidden; /* needed for max-height animation */
 }
 
-.menu-item {
-  opacity: 0;
-  transform: translateX(-28px);
-
-}
 
 /* Base state: items are out of view and invisible (prevents initial flash) */
 .menu-close .menu-item {
-  transition: all 100ms;
-  transition-delay: calc(80ms - var(--i, 0) * 15ms);
+  opacity: 0;
+  transform: translateX(-100px);
+  letter-spacing: -5px;
+  transition:
+    letter-spacing 600ms  cubic-bezier(0.22, 1, 0.36, 1) calc(var(--inv-i, 0) * 60ms ),
+    transform 1000ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--inv-i, 0) * 50ms ),
+    opacity 1000ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--inv-i, 0) * 5ms );
+  /* transition-delay: calc(80ms - var(--i, 0) * 15ms); */
+   /* transition-delay: calc(var(--inv-i, 0) * 60ms ); */
+   
 }
 
 
 
 .menu-open .menu-item {
+  letter-spacing: 0px;
   opacity: 1;
   transform: translateX(0);
   transition:
-    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 420ms cubic-bezier(0.22, 1, 0.36, 1);
+   letter-spacing 600ms  cubic-bezier(0.22, 1, 0.36, 1),
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 1000ms cubic-bezier(0.22, 1, 0.36, 1);
   /* smoother, shorter stagger; start a touch after panel begins */
-  transition-delay: calc(var(--i, 0) * 120ms + 500ms);
+  transition-delay: calc(var(--i, 0) * 60ms);
   will-change: transform, opacity;
 }
 

@@ -25,7 +25,6 @@
     "@pinia/nuxt": "0.11.2",
     "@prisma/client": "^6.16.2",
     "@unhead/vue": "^2.0.3",
-    "@unocss/nuxt": "^66.5.1",
     "@vueuse/nuxt": "13.9.0",
     "argon2": "^0.44.0",
     "cheerio": "^1.1.2",
@@ -42,7 +41,6 @@
     "openai": "^5.23.0",
     "pinia": "^3.0.3",
     "typescript": "^5.6.3",
-    "unocss": "^66.5.1",
     "vite-svg-loader": "^5.1.0",
     "vue": "^3.5.20",
     "vue-router": "^4.5.1",
@@ -51,9 +49,13 @@
   },
   "devDependencies": {
     "@nuxt/test-utils": "3.19.2",
+    "@unocss/core": "^66.5.2",
+    "@unocss/nuxt": "^66.5.1",
+    "@unocss/transformer-directives": "^66.5.2",
     "eslint": "^9.0.0",
     "prisma": "^6.16.2",
     "tsx": "^4.20.5",
+    "unocss": "^66.5.1",
     "vitest": "^3.2.4"
   }
 }
