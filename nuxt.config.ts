@@ -12,7 +12,8 @@ export default defineNuxtConfig({
   modules: ['@nuxt/content', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', // Nuxt 4-compatible
   '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', '@nuxt/fonts', '@nuxtjs/sitemap', '@nuxtjs/robots', '@nuxtjs/seo', '@unocss/nuxt', '@nuxtjs/i18n'],
   css: [
-    '@/assets/css/fonts.css'
+    '@/assets/css/fonts.css',
+    '@/assets/css/fix.css'
   ],
     i18n: {
     // Routing: / and /en for English, /fa for Persian

@@ -1,0 +1,124 @@
+/* ──────────────────────────────────────────────────────────────
+   UNIVERSAL MOBILE-FIRST BASE
+   Safe defaults for smooth scroll, no tap flash, responsive media,
+   iOS input sanity, and accessibility-friendly focus.
+   ────────────────────────────────────────────────────────────── */
+
+/* 1) Global reset & tap behavior */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent; /* kill gray tap flash */
+}
+
+/* 2) Root & scrolling */
+html {
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;          /* smooth anchor navigation */
+  touch-action: manipulation;       /* faster taps, no dbl-tap zoom */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* 3) Body & typography */
+body {
+  min-height: 100%;
+  margin: 0;
+  line-height: 1.5;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+               "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  color-scheme: light dark;         /* plays nice with OS dark mode */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-wrap: break-word;        /* long words don’t overflow */
+  overscroll-behavior: contain;     /* less scroll chaining (modals, etc.) */
+
+  /* Safe-area padding for notches (no effect on devices without them) */
+  padding-top: env(safe-area-inset-top);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+}
+
+/* 4) Media defaults (responsive by default) */
+img, picture, video, canvas, svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+iframe { max-width: 100%; }
+
+/* 5) Links */
+a {
+  color: inherit;
+  text-decoration-skip-ink: auto;
+}
+
+/* 6) Forms (mobile-friendly without restyling your theme) */
+button,
+input,
+select,
+textarea {
+  font: inherit;            /* use your site’s typography */
+  color: inherit;
+  letter-spacing: inherit;
+  background-color: transparent;
+}
+
+/* Prevent iOS zooming inputs on focus */
+input, select, textarea, button {
+  font-size: max(16px, 1rem);
+}
+
+/* Make textareas resize sensibly */
+textarea { resize: vertical; }
+
+/* Remove spinners on number inputs (mobile polish) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] { -moz-appearance: textfield; }
+
+/* Tweak search inputs (Safari/WebKit artifacts) */
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+/* 7) Buttons & clickable elements */
+button,
+[role="button"] {
+  cursor: pointer;
+}
+
+/* 8) Selections (neutral, won’t clash with your palette) */
+::selection {
+  background: rgba(0,0,0,0.12);
+}
+
+/* 9) Accessible focus (keeps visible rings without heavy styling) */
+:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* 10) Utility: smoothly scroll a programmatic container on iOS */
+.scrollable {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch; /* momentum scrolling */
+}
+
+.font-dosis{
+      font-family: 'Dosis', sans-serif;
+}

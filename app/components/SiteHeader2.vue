@@ -100,7 +100,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside, 
   <!-- Expanding input (smooth width + opacity) -->
   <div
     class="mx-2 h-[36px] overflow-hidden  transition-all duration-300 ease-out"
-    :class="searchOpen ? 'w-[200px]' : 'w-0 opacity-0', locale === 'EN' ? '-mr-10 ml-10' : '-ml-10 mr-10'"
+    :class="[searchOpen ? 'w-[200px]' : 'w-0 opacity-0', locale === 'EN' ? '-mr-10 ml-10' : '-ml-10 mr-10']"
     :aria-hidden="searchOpen ? 'false' : 'true'"
   >
     <input
@@ -109,9 +109,10 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside, 
       placeholder="Search…"
       class="h-full w-full px-3  outline-none border-t border-x-0 border-b-0 border-black/20 transition-opacity duration-1000"
       :class="searchOpen ? 'opacity-100' : 'opacity-0 pointer-events-none select-none'"
-      autofocus
+      
       @keydown.esc.prevent="closeSearch"
     />
+    <!-- fix: i removed this attrib from above input element, not to auto open keybaord and get focus on webpage opening: autofocus -->
   </div>
 
     <!-- Magnifier (persistent) -->

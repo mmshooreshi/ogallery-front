@@ -1,0 +1,11 @@
+{
+  "artistPage": {
+    "header": ["name", "cv_download_link"],
+    "sidebar": { "meta": {"birth_place_year": "text", "residence": "text"} },
+    "body": {
+      "bio": "html",
+      "works": [ {"id": "text", "title": "text", "year": "text", "medium": "text", "dimensions": "text", "alt": "text", "src": "image", "credit": "text"} ],
+      "installs": [ {"id": "text", "title": "text", "alt": "text", "src": "image", "dimensions": "text", "credit": "text"} ]
+    }
+  }
+}
