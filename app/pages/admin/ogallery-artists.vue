@@ -86,22 +86,63 @@ async function importRow (row: Row) {
 onMounted(() => {
   loadList()
 })
+
+
+// Load all details one by one
+async function loadAllDetails() {
+  for (const row of rows.value) {
+    if (!row.details && !row.loadingDetails) {
+      await loadDetails(row)
+    }
+  }
+}
+
+// Import all loaded rows one by one
+async function importAllLoaded() {
+  for (const row of rows.value) {
+    if (row.details && !row.imported && !row.importing) {
+      await importRow(row)
+    }
+  }
+}
+
 </script>
 
 <template>
   <section class="p-6 space-y-4">
-    <header class="flex items-center gap-4">
-      <h1 class="text-2xl font-semibold">Import OGallery artists</h1>
-      <button
-        type="button"
-        class="px-3 py-2 text-sm border rounded bg-black text-white"
-        :disabled="loadingList"
-        @click="loadList"
-      >
-        {{ loadingList ? 'Refreshing…' : 'Reload list' }}
-      </button>
-      <p v-if="loadError" class="text-sm text-red-600">{{ loadError }}</p>
-    </header>
+   <header class="flex items-center gap-4">
+  <h1 class="text-2xl font-semibold">Import OGallery artists</h1>
+  
+  <button
+    type="button"
+    class="px-3 py-2 text-sm border rounded bg-black text-white"
+    :disabled="loadingList"
+    @click="loadList"
+  >
+    {{ loadingList ? 'Refreshing…' : 'Reload list' }}
+  </button>
+
+  <button
+    type="button"
+    class="px-3 py-2 text-sm border rounded bg-blue-600 text-white"
+    :disabled="rows.length === 0 || loadingList"
+    @click="loadAllDetails"
+  >
+    Load all details
+  </button>
+
+  <button
+    type="button"
+    class="px-3 py-2 text-sm border rounded bg-green-600 text-white"
+    :disabled="rows.length === 0 || loadingList"
+    @click="importAllLoaded"
+  >
+    Import all loaded
+  </button>
+
+  <p v-if="loadError" class="text-sm text-red-600">{{ loadError }}</p>
+</header>
+
 
     <p class="text-sm text-black/70">
       1) Load list (fast) • 2) For each row: "Load details" • 3) Check data • 4) "Import".
