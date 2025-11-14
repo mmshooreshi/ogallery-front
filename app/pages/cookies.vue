@@ -1,3 +1,4 @@
+<!-- app/pages/cookies.vue -->
 <template>
   <div>
     

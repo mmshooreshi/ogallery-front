@@ -1,14 +1,7 @@
 // nuxt.config.ts
-import vueDevTools from 'vite-plugin-vue-devtools'
-
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  vite: {
-  plugins: [
-    vueDevTools(),
-  ],
-  },
 
 
   // Used by @nuxtjs/sitemap & @nuxtjs/robots
@@ -17,16 +10,13 @@ export default defineNuxtConfig({
     name: 'OGallery'
   },
 
-  modules: [    '@wgr-sa/nuxt-panzoom'
-,'@nuxt/content', '@nuxt/eslint', '@nuxt/image', '@nuxt/scripts', // Nuxt 4-compatible
-  '@nuxt/ui', '@vueuse/nuxt', '@pinia/nuxt', '@nuxt/fonts', '@nuxtjs/sitemap', '@nuxtjs/robots', '@nuxtjs/seo', '@unocss/nuxt', '@nuxtjs/i18n'],
+  modules: [   'motion-v/nuxt', 
+,  '@nuxt/image', // Nuxt 4-compatible
+  '@vueuse/nuxt', '@pinia/nuxt', '@nuxtjs/sitemap', '@nuxtjs/robots', '@nuxtjs/seo', '@unocss/nuxt', '@nuxtjs/i18n'],
   
-    panzoom: {
-    addControls: true, // Add PanzoomControls component 
-  },
   css: [
     '@/assets/css/fonts.css',
-    '@/assets/css/fix.css'
+    // '@/assets/css/fix.css'
   ],
     i18n: {
     // Routing: / and /en for English, /fa for Persian
@@ -59,39 +49,6 @@ export default defineNuxtConfig({
               { rel: 'manifest', href: '/favicons/site.webmanifest' },
       ]
     }
-  },
-
-  // Nuxt Content v3
-  content: {
-    
-    build: {
-      markdown: {
-        toc: { depth: 3, searchDepth: 3 },
-        highlight: {
-          theme: { default: 'github-light', dark: 'github-dark' }
-          // langs: ['c', 'cpp', 'java']
-        },
-        // remarkPlugins: { 'remark-gfm': true },
-        // rehypePlugins: { 'rehype-figure': {} }
-      }
-    },
-    renderer: {
-      anchorLinks: { h2: true, h3: true, h4: true }
-    },
-    watch: {
-      enabled: true,
-      port: 4000,
-      showURL: false
-    },
-    // experimental: { sqliteConnector: 'native' }, // if Node >= 22.5
-    experimental: {
-      sqliteConnector: 'native',
-    },
-
-    
-    // database: { type: 'memory' } as any // force memory DB, no sqlite
-
-    // database: { type: 'sqlite', filename: '.data/content.db' }
   },
 
   image: {

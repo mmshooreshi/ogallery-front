@@ -1,3 +1,4 @@
+// app/composables/useLocalCache.ts
 import { ref, watch, onMounted, watchEffect } from 'vue'
 
 type Options<T> = { ttlMs?: number; swr?: boolean; initial?: T }

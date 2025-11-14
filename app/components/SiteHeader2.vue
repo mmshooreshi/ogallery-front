@@ -80,7 +80,7 @@ watch(
 <template>
   <div class="relative z-10">
     <header
-      class="!select-none fixed top-0 inset-x-0 z-20 w-full h-[60px]  bg-white border-b border-black/8 flex items-center">
+      class="!select-none fixed top-0 inset-x-0 z-20 w-full h-[64px] bg-white border-b border-black/8 flex items-center">
       <!-- Left: Hamburger (60x60) -->
       <!-- <button
       class="w-[60px] h-[60px] flex items-center justify-center appearance-none border-none bg-transparent cursor-pointer text-[#595a5c]"
@@ -107,7 +107,7 @@ watch(
           :class="searchOpen ? 'opacity-0 pointer-events-none  md:pointer-events-auto' : 'opacity-90'">
           <NuxtLink :to="switchLocalePath('EN')" class="no-underline font-english" @touchstart="onTouchTapStyleToggle"
             @touchend="onTouchTapStyleToggle"
-            :class="[locale === 'EN' ? 'text-[#ffde00]]' : 'text-inherit', { active: hover }]"
+            :class="[locale === 'EN' ? 'text-[#ffde00]' : 'text-inherit', { active: hover }]"
             aria-label="Switch to English">EN</NuxtLink>
           <span class="px-2 opacity-40">|</span>
           <NuxtLink :to="switchLocalePath('FA')" class="no-underline font-persian" @touchstart="onTouchTapStyleToggle"
@@ -168,7 +168,7 @@ watch(
   <div class="drawer-panel absolute inset-0 bg-white" aria-hidden="true"></div>
 
   <!-- Static content (does not move with panel) -->
-  <div class="drawer-content relative z-10 w-full h-full" :class="open ? 'pointer-events-auto' : 'pointer-events-none'">
+  <div class="drawer-content relative z-10 w-full h-full top-1.5" :class="open ? 'pointer-events-auto' : 'pointer-events-none'">
     <div class="h-[56px]"></div> <!-- header spacer -->
 
     <ul class="list-none px-[5px] m-0 p-0" :class="open ? 'menu-open' : 'menu-close'">
@@ -182,7 +182,7 @@ watch(
           :to="lp(l.to)"
           @click="computedTarget = l.to"
           :class="[computedTarget == l.to ? 'text-[#ffde00]' : '']"
-          class="uppercase block py-[1px] px-[5px] w-max pr-8 no-underline font-light text-[1.4rem] text-[#1e1e1e]/70 rounded-lg hover:text-[#ffde00] transition-colors duration-200"
+          class="uppercase block py-[1px] px-[10px] w-max pr-8 no-underline font-light text-[1.4rem] text-[#1e1e1e]/70 rounded-lg hover:text-[#ffde00] transition-colors duration-200"
         >
           {{ l.label }}
         </NuxtLink>

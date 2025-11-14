@@ -1,23 +1,164 @@
 <!-- app/pages/exhibitions/[slug].vue -->
 <script setup lang="ts">
+import { useLocalCache } from '~/composables/useLocalCache'
+
+interface MediaItem {
+    id: string;
+    role: string;
+    media: { url: string, alt?: string, caption?: string };
+}
+
+interface Exhibition {
+    media?: MediaItem[];
+}
+
+const LBL = '[exhibitions/[slug]]'
+const log  = (...a:any[]) => console.log(LBL, ...a)
 
 const route = useRoute()
-const { data: doc } = await useAsyncData('exhibitions-item', () =>
-  queryCollection('exhibitions').where({ slug: route.params.slug as string }).first()
+const { locale } = useI18n()
+const slug = computed(() => String(route.params.slug))
+const key  = computed(() => `exhibition:${locale.value}-${slug.value}`)
+
+const { data: exhibition, pending, error } = useLocalCache<Exhibition>(
+  () => key.value,
+  () => $fetch<any>(`/_q/exhibitions/${encodeURIComponent(slug.value)}`, {
+    query: { locale: locale.value },
+  }),
+  { ttlMs: 60_000, swr: true, initial: {} as Exhibition },
 )
-useSeoMeta({ title: doc.value?.title || doc.value?.name || 'Exhibition' })
+
+const showLightbox = ref(false)
+const lightboxIndex = ref(0)
+
+function openLightbox(i: number) {
+  lightboxIndex.value = i
+  showLightbox.value = true
+}
+
+const loc = computed(() => (exhibition.value as any)?.locales?.[0] ?? null)
+const installationSlides = computed(
+  () => exhibition.value?.media?.filter((m: any) => m.role === 'INSTALLATION') ?? [],
+)
+
+const selectedWorks = computed(() =>
+  exhibition.value?.media?.filter((m: any) => m.role === 'SELECTED_WORK' || m.role === 'WORK') ?? []
+)
+
 </script>
 
 <template>
-  <article v-if="doc">
-    <h1 class="text-3xl font-semibold mb-2">{{ doc.title || doc.name }}</h1>
-    <p class="opacity-70 mb-6">
-      {{ doc.startDate || doc.date }}
-      <span v-if="doc.endDate"> — {{ doc.endDate }}</span>
-    </p>
-    <div v-if="doc.pressRelease || doc.text" class="prose max-w-none">
-      <p v-for="p in (doc.pressRelease || doc.text || '').split('\n\n')" :key="p">{{ p }}</p>
+  <section class="px-0 relative z-0">
+    <!-- Fixed Exhibition Header -->
+    <div
+      id="exhibition-header"
+      class="fixed top-[60px] left-0 right-0 bg-white border-b border-b-0.5 border-black/20 z-10 border-b-solid "
+    >
+      <div
+        class="max-w-screen-md mx-auto flex flex-col md:flex-row items-start md:items-center justify-between px-4 sm:px-4 pb-1"
+      >
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full">
+          <h1 class="text-xl md:text-2xl uppercase !font-light text-gray-700/80 text-nowrap">
+            {{ loc?.title || 'Exhibition' }}
+          </h1>
+          <nav class="border-t border-t-0 border-black/20 border-t-solid flex flex-wrap flex-row  sm:w-max self-end -mt-2  pt-2  gap-3 sm:gap-4 text-md md:text-base uppercase">
+            <a href="#bio" class="no-underline tracking-tight text-black/60 hover:text-yellow-500 transition">Biography</a>
+            <span class=" text-black/20 inline">|</span>
+            <a href="#works" class="no-underline tracking-tight text-black/60 hover:text-yellow-500 transition">Selected Works</a>
+            <span class=" text-black/20 inline">|</span>
+            <a href="#installation" class="no-underline tracking-tight text-black/60 hover:text-yellow-500 transition">Installation Views</a>
+          </nav>
+        </div>
+      </div>
+    
     </div>
-  </article>
-  <p v-else>Not found.</p>
+
+    <!-- Push content below fixed header -->
+    <div class="pt-24 md:pt-20  max-w-screen-md mx-auto px-4 z-0">
+
+
+      <article v-if="exhibition">
+        <!-- BIO + CV -->
+        <div id="bio" class="flex items-center justify-between">
+          <div class="text-[23px] !font-thin uppercase tracking-tight text-gray-800/80">Bio</div>
+          <a
+            v-if="exhibition.media?.find(m => m.role === 'CV')"
+            :href="exhibition.media.find(m => m.role === 'CV')?.media.url"
+            target="_blank"
+            rel="noopener"
+            class="no-underline text-md uppercase underline text-gray-600 hover:text-yellow-500 transition mr-0"
+          >
+            Download CV
+          </a>
+        </div>
+
+        <!-- Bio Content -->
+        <div
+          v-if="loc?.bodyHtml"
+          class="prose prose-sm sm:prose my-4 lg:prose-lg max-w-none text-base text-gray-700/85 leading-relaxed"
+          v-html="loc.bodyHtml"
+        />
+        <p v-else class="opacity-70">Biography coming soon.</p>
+
+    <!-- Selected Works -->
+    <section id="works" v-if="selectedWorks" class="mt-12 scroll-mt-20 ">
+        <h2 class="text-2xl !font-light text-gray-700/90 mb-4 uppercase tracking-tight">Selected Works</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div
+            v-for="(m, i) in selectedWorks"
+            :key="m.media.url"
+            @click="openLightbox(i)"
+            class="cursor-pointer"
+        >
+            <NuxtImg
+            :src="m.media.url"
+            class="w-full aspect-square object-cover hover:scale-95 hover:opacity-80 transition-transform"
+            :alt="m.media.alt || ''"
+            loading="lazy"
+            decoding="async"
+            />
+        </div>
+        </div>
+
+        <GalleryLightBox
+        v-if="showLightbox"
+        :slides="selectedWorks"
+        :start-index="lightboxIndex"
+        @close="showLightbox = false"
+        />
+    </section>
+
+        <!-- Installation Views -->
+        <section id="installation" v-if="installationSlides.length" class="mt-12">
+          <h2 class="text-2xl font-light text-gray-700/90 mb-4 uppercase tracking-tight">Installation Views</h2>
+
+          <EmblaCarousel :slides="installationSlides" />
+        </section>
+      </article>
+
+      <p v-else class="opacity-70">Exhibition not found.</p>
+
+      <footer class="mt-8">
+        <NuxtLink to="/exhibitions" class="text-sm underline hover:text-yellow-500 transition">← All exhibitions</NuxtLink>
+      </footer>
+    </div>
+          <div v-if="pending" class="fixed z-20 bottom-6 py-0 text-black/70 bg-yellow-500/60 px-2 ">Loading…</div>
+      <div v-else-if="error" class="fixed z-20 bottom-6 py-0 text-red-800/80 bg-red-500/60 px-2 ">Error loading exhibition.</div>
+
+  </section>
 </template>
+
+<style scoped>
+/* Default style for larger screens */
+#bio, #works, #installation {
+  scroll-margin-top: 160px; /* your header height + a bit of padding */
+}
+
+/* Style for mobile devices */
+@media (max-width: 767px) {
+  #bio, #works, #installation {
+    scroll-margin-top: 160px;
+  }
+}
+
+</style>

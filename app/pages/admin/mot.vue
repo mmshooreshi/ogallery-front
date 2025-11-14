@@ -1,4 +1,4 @@
-<!-- app/pages/admin/media.vue -->
+<!-- app/pages/admin/mot.vue -->
 <template>
   <div class="min-h-screen flex bg-[var(--ui-bg,#f6f7f9)] text-[var(--ui-fg,#111)]" @keydown.esc="closeAllOverlays">
     <!-- Sidebar -->

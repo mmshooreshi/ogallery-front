@@ -1,4 +1,4 @@
-<!-- app/pages/artists/index.vue -->
+<!-- app/pages/artists/prev/index.vue -->
 <script setup lang="ts">
 const locale = useState<'EN' | 'FA'>('locale')
 

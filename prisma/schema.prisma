@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,150 +7,117 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Locale {
-  EN
-  FA
-}
-
-enum Status {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
-// --- Admin (minimal) ---
 model User {
-  id           Int       @id @default(autoincrement())
-  email        String    @unique
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
   passwordHash String
   role         String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   mediaCreated Media[]
 }
 
-// --- One table for all types (Artist, Exhibition, News, Studio, etc.) ---
 model Entry {
-  id        Int      @id @default(autoincrement())
-  kind      String
-  slug      String
-  status    Status   @default(DRAFT)
-
-  dates     Json?
-  props     Json?
-
-  seo       Json?
-  jsonld    Json?
-
+  id           Int           @id @default(autoincrement())
+  kind         String
+  slug         String
+  status       Status        @default(DRAFT)
+  dates        Json?
+  props        Json?
+  seo          Json?
+  jsonld       Json?
   coverMediaId Int?
-  coverMedia   Media? @relation("Entry_coverMedia", fields: [coverMediaId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
-
-  locales   EntryLocale[]
-  media     EntryMedia[]
-  linksFrom Link[] @relation("from")
-  linksTo   Link[] @relation("to")
-  tags      EntryTag[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
+  coverMedia   Media?        @relation("Entry_coverMedia", fields: [coverMediaId], references: [id])
+  locales      EntryLocale[]
+  media        EntryMedia[]
+  tags         EntryTag[]
+  linksFrom    Link[]        @relation("from")
+  linksTo      Link[]        @relation("to")
 
   @@unique([kind, slug])
   @@index([kind, status])
   @@index([updatedAt])
 }
 
-// --- Localized fields only ---
 model EntryLocale {
-  id       Int     @id @default(autoincrement())
-  entryId  Int
-  locale   Locale
-
-  slug     String?
-  title    String?
-  subtitle String?
-  summary  String?
-  bodyHtml String?
-
-  seo      Json?   // localized override
-  jsonld   Json?   // localized override
-  data     Json?
-
-  entry    Entry   @relation(fields: [entryId], references: [id])
+  id        Int      @id @default(autoincrement())
+  entryId   Int
+  locale    Locale
+  slug      String?
+  title     String?
+  subtitle  String?
+  summary   String?
+  bodyHtml  String?
+  seo       Json?
+  jsonld    Json?
+  data      Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  entry     Entry    @relation(fields: [entryId], references: [id])
 
   @@unique([entryId, locale])
 }
 
-// --- Media (rich, future-proof) ---
-
 model Media {
-  id         Int      @id @default(autoincrement())
-  url        String @unique
-  kind       String?
-  mime       String?
-  size       Int?
-  width      Int?
-  height     Int?
-  durationMs Int?
-  alt        String?
-  caption    String?
-  credit     String?
-  copyright  String?
-  variants   Json?
-  meta       Json?
-  isPublic   Boolean  @default(true)
-
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  createdById Int?
-  createdBy  User?    @relation(fields: [createdById], references: [id])
-
-  // back-relations
-  coverForEntries Entry[] @relation("Entry_coverMedia")
+  id              Int          @id @default(autoincrement())
+  url             String       @unique
+  kind            String?
+  mime            String?
+  size            Int?
+  width           Int?
+  height          Int?
+  durationMs      Int?
+  alt             String?
+  caption         String?
+  credit          String?
+  copyright       String?
+  variants        Json?
+  meta            Json?
+  isPublic        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  createdById     Int?
+  coverForEntries Entry[]      @relation("Entry_coverMedia")
   links           EntryMedia[]
+  createdBy       User?        @relation(fields: [createdById], references: [id])
 }
 
-// link media to entries with roles + order; per-link meta (e.g., parsed dims/year)
 model EntryMedia {
   id      Int    @id @default(autoincrement())
   entryId Int
   mediaId Int
-  role    String // "HERO" | "SELECTED_WORK" | "INSTALLATION" | "COVER" | ...
+  role    String
   ord     Int?
-  meta    Json?  // { widthCm, heightCm, year, label, ... }
-
+  meta    Json?
   entry   Entry  @relation(fields: [entryId], references: [id])
   media   Media  @relation(fields: [mediaId], references: [id])
 
-  @@unique([entryId, mediaId, role]) 
+  @@unique([entryId, mediaId, role])
   @@index([entryId, role, ord])
   @@index([mediaId])
 }
 
-// --- Graph links between entries (Artist ↔ Exhibition, Related, etc.) ---
 model Link {
   id     Int    @id @default(autoincrement())
   fromId Int
   toId   Int
-  role   String // "PARTICIPATES_IN" | "AUTHORED_BY" | "RELATED_TO" | ...
+  role   String
   ord    Int?
-
   from   Entry  @relation("from", fields: [fromId], references: [id])
-  to     Entry  @relation("to",   fields: [toId],   references: [id])
+  to     Entry  @relation("to", fields: [toId], references: [id])
 
   @@index([fromId, role, ord])
   @@index([toId, role, ord])
 }
 
-// --- Simple taxonomy ---
 model Tag {
-  id     Int     @id @default(autoincrement())
-  slug   String
-  name   String
-  locale Locale?
-
+  id      Int        @id @default(autoincrement())
+  slug    String
+  name    String
+  locale  Locale?
   entries EntryTag[]
 
   @@unique([slug, locale])
@@ -167,11 +132,21 @@ model EntryTag {
   @@id([entryId, tagId])
 }
 
-// --- Redirects (SEO) ---
 model UrlAlias {
-  id       Int      @id @default(autoincrement())
-  from     String   @unique
-  to       String
-  locale   Locale?
+  id        Int      @id @default(autoincrement())
+  from      String   @unique
+  to        String
+  locale    Locale?
   createdAt DateTime @default(now())
+}
+
+enum Locale {
+  EN
+  FA
+}
+
+enum Status {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }

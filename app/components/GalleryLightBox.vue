@@ -1,8 +1,10 @@
+<!-- app/components/GalleryLightBox.vue -->
 <script setup lang="ts">
 const props = defineProps<{
   slides: { id: string; media: { url: string; alt?: string | null; caption?: string } }[]
   startIndex?: number
 }>()
+
 
 const emit = defineEmits(['close'])
 
@@ -38,18 +40,13 @@ const zoomRef = ref()
     <!-- Big Image -->
     <div class="flex-1 flex flex-col gap-2 items-center justify-center w-full px-4 h-[500px]   mb-44 pt-24 fixed">
 
-      <NuxtImg
+      <img
         :src="slides[currentIndex]?.media.url"
         :alt="slides[currentIndex]?.media.alt || ''" 
         class="h-full object-center object-contain max-w-[90vw] "
       />
 
 
-      <div class="max-w-screen  text-black/80 font-medium text-md overflow-auto mx-3 fixed bottom-[10vh]  h-92px flex items-end pb-2 left-0" style="overflow-wrap: anywhere;"> 
-        <!-- {{slides[currentIndex]}} -->
-         {{slides[currentIndex]?.media?.caption}} 
-    
-    </div>
     </div>
 
        <button
@@ -85,12 +82,24 @@ const zoomRef = ref()
       
     </button>
 
+
+
     <!-- Thumbnail strip -->
-    <div class="flex gap-2 h-[10vh] px-2 py-2 bg-black/10 max-w-screen overflow-x-auto z-10 fixed bottom-0 ">
+    <div class="flex flex-col max-w-screen bg-transparent w-full h-max  bg-black/10    z-10 w-max fixed bottom-0 ">
+      
+
+      <div class=" bg-white max-w-full text-black/60 pb-1 mx-4 md:mx-0 font-medium text-md overflow-auto  flex items-end  left-0" style="overflow-wrap: anywhere;"> 
+        <!-- {{slides[currentIndex]}} -->
+         {{slides[currentIndex]?.media?.caption}} 
+    
+    </div>
+
+        <div class="flex gap-2 px-2 py-2 bg-black/10 md:max-w-[100vw] overflow-x-auto  z-10 bottom-0">
+
       <div
         v-for="(s, i) in slides"
         :key="s.id"
-        class="cursor-pointer h-14s outline-solid outline-2  text-white"
+        class="cursor-pointer outline-solid outline-2  text-white h-[8vh]"
         :class="i === currentIndex ? 'outline-yellow-500' : 'outline-transparent'"
         @click="goTo(i)"
       >
@@ -98,8 +107,9 @@ const zoomRef = ref()
         <NuxtImg
           :src="s.media.url"
           :alt="s.media.alt || ''"
-          class="h-15 min-w-15 object-contain"
+          class="h-full w-max object-contain"
         />
+      </div>
       </div>
     </div>
   </div>

@@ -1,3 +1,4 @@
+<!-- app/components/EmblaCarousel.vue -->
 <script setup lang="ts">
 import emblaCarouselVue from 'embla-carousel-vue'
 import Autoplay from 'embla-carousel-autoplay'
@@ -71,7 +72,7 @@ onBeforeUnmount(() => {
         :key="m.id"
         class="embla__slide flex items-center justify-center h-full w-full"
       >
-        <NuxtImg
+        <img
           :src="m.media.url"
           :alt="m.media.alt || ''"
           class="w-full h-full object-cover"

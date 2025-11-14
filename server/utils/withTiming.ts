@@ -1,4 +1,4 @@
-// // server/utils/withTiming.ts
+// server/utils/withTiming.ts
 // import { getRequestEvent, setResponseHeader, getResponseHeader } from 'h3'
 // import { performance } from 'node:perf_hooks'
 

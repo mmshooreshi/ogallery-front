@@ -1,0 +1,18 @@
+{
+  "artists": {
+    "detail": {
+      "tabs": {
+        "bio": "Biography",
+        "selectedWorks": "Selected Works",
+        "installationViews": "Installation Views"
+      },
+      "bioHeading": "Bio",
+      "cvLink": "Download CV",
+      "bioFallback": "Biography coming soon.",
+      "notFound": "Artist not found.",
+      "backToList": "← All artists",
+      "loading": "Loading…",
+      "error": "Error loading artist."
+    }
+  }
+}

@@ -1,4 +1,4 @@
-// domains.ts — Nuxt 4 "domain file" to drive page structure/rendering
+// schemas/original/domains.ts
 // Each entry has a URL pattern and a minimal, dense schema describing the layout fields.
 // Sample links are included above each entry.
 //

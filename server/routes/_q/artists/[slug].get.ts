@@ -1,3 +1,4 @@
+// server/routes/_q/artists/[slug].get.ts
 import type { Locale } from '@prisma/client'
 import { getArtist } from '~~/server/queries/artists'
 

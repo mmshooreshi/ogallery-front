@@ -120,7 +120,7 @@ button,
 }
 
 .font-dosis{
-      font-family: 'Dosis', sans-serif;
+      font-family: 'Dosis', sans-serif !important;
 }
 
 .fixMobileSelect {

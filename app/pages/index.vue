@@ -11,7 +11,7 @@ const currentEx = computed(() => {
   list.sort((a: any, b: any) => String(b?.startDate || '').localeCompare(String(a?.startDate || '')))
   return list.find((x: any) => x?.status === 'current') || list[0]
 })
-const heroImage = computed(() => currentEx.value?.images?.[0] || '/images/placeholder-hero.jpg')
+const heroImage = computed(() => currentEx.value?.images?.[0] || '/images/ph-hero.svg')
 const heroTitle = computed(() => currentEx.value?.title || '')
 const heroArtist = computed(() => currentEx.value?.artists?.[0] || '')
 const heroDates = computed(() => {
@@ -26,6 +26,8 @@ const news = computed(() => {
   return list.slice(0, 6)
 })
 
+
+
 // Cookie banner
 const showCookies = ref(false)
 onMounted(() => { showCookies.value = !localStorage.getItem('cookie-accepted') })
@@ -33,6 +35,22 @@ function acceptCookies () {
   localStorage.setItem('cookie-accepted', '1')
   showCookies.value = false
 }
+// Cookie preferences modal
+const showCookieModal = ref(false)
+
+function openCookieModal () {
+  showCookieModal.value = true
+}
+
+function closeCookieModal () {
+  showCookieModal.value = false
+}
+
+function saveCookiePreferences () {
+  // TODO: persist checkbox values if you actually care
+  closeCookieModal()
+}
+
 
 // Helpers
 function prettyDate(iso: string) {
@@ -70,19 +88,178 @@ function prettyDate(iso: string) {
       </div>
     </section>
 
-    <!-- COOKIE BANNER -->
-    <transition name="fade">
-      <div v-if="showCookies" class="cookie">
-        <h3 class="cookie__title">This website uses cookies</h3>
-        <p class="cookie__text">
-          This site uses cookies to help make it more useful to you. Please contact us to find out more about our Cookie Policy.
-        </p>
-        <div class="cookie__actions">
-          <NuxtLink to="/cookies" class="link">Manage cookies</NuxtLink>
-          <button @click="acceptCookies" class="btn">Accept</button>
+<!-- COOKIE BANNER -->
+<transition name="fade"   enter-active-class="transform transition-all duration-500 ease-out"
+  enter-from-class="translate-y-full "
+  enter-to-class="translate-y-0 "
+  leave-active-class="transform transition-all duration-500 ease-in"
+  leave-from-class="translate-y-0 "
+  leave-to-class="translate-y-full"
+>
+  <div
+    id="cookie_notification"
+    v-if="showCookies"
+    class="cookie font-dosis min-w-[90%] md:w-screen mx-0 fixed bottom-0 left-0
+           bg-white border-t border-black/10 shadow-lg
+           flex flex-col items-center text-center gap-4
+           sm:flex-row sm:items-center sm:text-left sm:justify-between sm:gap-6
+           px-4 py-2 md:py-4"
+  >
+    <div class="text-sm max-w-2xl">
+      <h3 class="font-black  mb-1 mt-1">
+        This website uses cookies
+      </h3>
+      <p class="my-0 opacity-70">
+        This site uses cookies to help make it more useful to you. Please contact us to find out more about our Cookie Policy.
+      </p>
+    </div>
+
+    <div class="cookie__actions flex flex-col items-center gap-3 sm:flex-row sm:gap-0">
+
+      <button
+  type="button"
+  @click="openCookieModal"
+  class="text-[#595a5c] text-md no-underline"
+>
+  Manage cookies
+</button>
+
+
+      <div
+        @click="acceptCookies"
+        class="pt-[12px] pb-[10px] px-[15px] mt-1 mx-0 md:mr-7 md:ml-4 md:my-0 bg-black text-white border border-black
+               rounded-none text-sm font-dosis active:bg-[#f6c800] click:bg-[#f6c800]"
+      >
+        Accept
+      </div>
+    </div>
+  </div>
+</transition>
+
+<!-- COOKIE PREFERENCES MODAL -->
+<Transition
+  enter-active-class="transform transition-all duration-500 ease-out"
+  enter-from-class="-translate-y-full opacity-0"
+  enter-to-class="translate-y-0 opacity-100"
+  leave-active-class="transform transition-all duration-500 ease-in"
+  leave-from-class="translate-y-0 opacity-100"
+  leave-to-class="-translate-y-full opacity-0"
+>
+  <div
+    v-if="showCookieModal"
+    class="fixed inset-0 z-50 flex items-start justify-center pt-10"
+    aria-modal="true"
+    role="dialog"
+  >
+    <!-- Backdrop -->
+    <div
+      class="absolute inset-0 bg-black/40"
+      @click="closeCookieModal"
+    ></div>
+
+    <!-- Modal panel -->
+    <div class="relative z-10 bg-white max-w-lg w-[90%] md:w-[480px] rounded-md shadow-lg p-4 md:p-6">
+      <!-- Close button -->
+      <button
+        type="button"
+        class="absolute right-3 top-3 text-gray-700"
+        @click="closeCookieModal"
+        aria-label="Close"
+      >
+        <span class="text-2xl leading-none">&times;</span>
+      </button>
+
+      <h6 class="text-xl font-bold mb-1">Cookie Preferences</h6>
+      <p class="text-sm mb-4">
+        Check the boxes for the cookie categories you allow our site to use
+      </p>
+
+      <div class="space-y-4 text-sm">
+        <!-- Strictly necessary -->
+        <div class="cookie-section">
+          <div class="flex items-center gap-2">
+            <input
+              id="Strictly"
+              type="checkbox"
+              class="accent-black"
+              checked
+              disabled
+            >
+            <label for="Strictly" class="font-medium">
+              Strictly necessary
+            </label>
+          </div>
+          <p class="mt-1 text-xs text-gray-600">
+            Required for the website to function and cannot be disabled.
+          </p>
+        </div>
+
+        <!-- Preferences and functionality -->
+        <div class="cookie-section">
+          <div class="flex items-center gap-2">
+            <input
+              id="functionality"
+              type="checkbox"
+              class="accent-black"
+              checked
+            >
+            <label for="functionality" class="font-medium">
+              Preferences and functionality
+            </label>
+          </div>
+          <p class="mt-1 text-xs text-gray-600">
+            Improve your experience on the website by storing choices you make about how it should function.
+          </p>
+        </div>
+
+        <!-- Statistics -->
+        <div class="cookie-section">
+          <div class="flex items-center gap-2">
+            <input
+              id="statistics"
+              type="checkbox"
+              class="accent-black"
+              checked
+            >
+            <label for="statistics" class="font-medium">
+              Statistics
+            </label>
+          </div>
+          <p class="mt-1 text-xs text-gray-600">
+            Allow us to collect anonymous usage data in order to improve the experience on our website.
+          </p>
+        </div>
+
+        <!-- Marketing -->
+        <div class="cookie-section">
+          <div class="flex items-center gap-2">
+            <input
+              id="marketing"
+              type="checkbox"
+              class="accent-black"
+              checked
+            >
+            <label for="marketing" class="font-medium">
+              Marketing
+            </label>
+          </div>
+          <p class="mt-1 text-xs text-gray-600">
+            Allow us to identify our visitors so that we can offer personalised, targeted marketing.
+          </p>
         </div>
       </div>
-    </transition>
+
+      <button
+        type="button"
+        id="cookie-save"
+        class="btn btn-warning btn-sm mt-3 px-3 py-2 bg-[#f6c800] text-black text-sm rounded-none border border-[#f6c800]"
+        @click="saveCookiePreferences"
+      >
+        Save Preferences
+      </button>
+    </div>
+  </div>
+</Transition>
 
     <!-- NEWS LIST -->
     <section class="news">
@@ -143,23 +320,23 @@ function prettyDate(iso: string) {
 .hero__dates { margin:10px 0 0; font-size:11px; letter-spacing:.18em; opacity:.9; }
 .hero__bar { margin:18px 0 0 auto; height:3px; width:56px; background:#f6c800; border-radius:2px; }
 
-/* Cookie banner */
-.cookie {
-  position:fixed; left:50%; transform:translateX(-50%);
-  right:auto; bottom:12px; z-index:50;
-  background:#fff; border:1px solid rgba(0,0,0,.1); border-radius:12px;
-  box-shadow:0 6px 24px rgba(0,0,0,.12);
-  padding:16px; width:min(640px, 94vw);
+.btn {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 14px;
+  background: #fff;
+  cursor: pointer;
 }
-.cookie__title { margin:0 0 6px; font-weight:600; }
-.cookie__text { margin:0; font-size:14px; opacity:.85; }
-.cookie__actions { display:flex; align-items:center; gap:12px; margin-top:10px; }
-.btn { border:1px solid #ccc; border-radius:8px; padding:6px 12px; font-size:14px; background:#fff; cursor:pointer; }
-.btn:hover{ background:#f6f6f6; }
-.link { 
-  /* text-decoration:underline;  */
+
+.btn:hover {
+  background: #f6f6f6;
+}
+
+.link {
   text-decoration: none;
-  color:inherit; }
+  color: inherit;
+}
 
 /* Fade transition */
 .fade-enter-active,.fade-leave-active { transition:opacity .2s ease; }
@@ -190,5 +367,11 @@ function prettyDate(iso: string) {
     border: 0;
     border-top: 1px solid;
     opacity: .25;
+}
+
+#cookie_notification {
+    box-shadow: 0 0 5px 0 rgba(0, 0, 0, .23);
+    /* transition: transform .6s cubic-bezier(0, 0, .2, 1); */
+    will-change: transform;
 }
 </style>

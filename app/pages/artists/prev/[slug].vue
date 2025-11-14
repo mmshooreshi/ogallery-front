@@ -1,4 +1,4 @@
-<!-- app/pages/artists/[slug].vue -->
+<!-- app/pages/artists/prev/[slug].vue -->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import emblaCarouselVue from 'embla-carousel-vue'

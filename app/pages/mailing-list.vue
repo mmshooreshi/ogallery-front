@@ -1,3 +1,4 @@
+<!-- app/pages/mailing-list.vue -->
 <template>
   <div>
     
