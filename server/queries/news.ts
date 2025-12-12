@@ -25,8 +25,13 @@ type NewsRow = {
   dates: any | null
   props: any | null
   coverMedia: { url: string; meta: any | null } | null
-  locales: { locale: Locale; title: string | null }[]
-  tags: { tag: { slug: string; name: string } }[]
+  locales: { locale: Locale; title: string | null; data?: any }[]
+  tags: {
+    tag: {
+      slug: string
+      name: string
+    }
+  }[]
 }
 
 /* =============================
@@ -78,30 +83,23 @@ function pickTitle(
 }
 
 /* =============================
- * Tabs (UI-ready)
+ * Tabs (FULL DATASET)
  * ============================= */
 
 function buildTabs(
   rows: NewsRow[],
   opts?: { year?: number; month?: number }
 ) {
-
-
-  console.log(
-  rows.length,
-  rows.map(r => entryDate(r))
-)
-
-let filtered =
-  opts?.year || opts?.month
-    ? rows.filter(e => {
-        const d = entryDate(e)
-        if (!d) return false
-        if (opts?.year && d.getUTCFullYear() !== opts.year) return false
-        if (opts?.month && d.getUTCMonth() + 1 !== opts.month) return false
-        return true
-      })
-    : rows
+  const filtered =
+    opts?.year || opts?.month
+      ? rows.filter(e => {
+          const d = entryDate(e)
+          if (!d) return false
+          if (opts?.year && d.getUTCFullYear() !== opts.year) return false
+          if (opts?.month && d.getUTCMonth() + 1 !== opts.month) return false
+          return true
+        })
+      : rows
 
   const map = new Map<string, { key: string; label: string; count: number }>()
 
@@ -147,18 +145,27 @@ export async function listNews(
       props: true,
       coverMedia: { select: { url: true, meta: true } },
       locales: { select: { locale: true, title: true, data: true } },
-      
       tags: {
         select: {
-          tag: { select: { slug: true, name: true } },
+          tag: {
+            select: {
+              slug: true,
+              name: true,
+            },
+          },
         },
       },
     },
     orderBy: { updatedAt: 'desc' },
   })
 
-  const tabs = buildTabs(rows, opts)
+  /* ---------- TABS (never tag-filtered) ---------- */
+  const tabs = buildTabs(rows, {
+    year: opts?.year,
+    month: opts?.month,
+  })
 
+  /* ---------- ITEMS (tag-filtered) ---------- */
   let filtered = rows.filter(e => {
     const d = entryDate(e)
     if (!d) return false
@@ -172,45 +179,45 @@ export async function listNews(
       e.tags.some(t => t.tag.slug === opts.tag)
     )
   }
+
   filtered.sort((a, b) => {
     const da = entryDate(a)?.getTime() ?? 0
     const db = entryDate(b)?.getTime() ?? 0
-    return db - da // newest first
+    return db - da
   })
 
   const items: NewsItemCard[] = filtered.map(e => {
-  const s = getScrapedProps(e.props)
-  const r = getDatesRange(e.dates)
-  const d = entryDate(e)
+    const s = getScrapedProps(e.props)
+    const r = getDatesRange(e.dates)
+    const d = entryDate(e)
 
-  const localeOrder: Locale[] =
-    locale === 'FA' ? ['FA', 'EN'] : ['EN', 'FA']
+    const localeOrder: Locale[] =
+      locale === 'FA' ? ['FA', 'EN'] : ['EN', 'FA']
 
-  const localeData =
-    e.locales.find(l => l.locale === localeOrder[0]) ??
-    e.locales.find(l => l.locale === localeOrder[1])
+    const localeData =
+      e.locales.find(l => l.locale === localeOrder[0]) ??
+      e.locales.find(l => l.locale === localeOrder[1])
 
-  const summary =
-    localeData?.data?.sections
-      ?.find((sec: any) => sec.key === 'ARTICLE')
-      ?.blocks?.find((b: any) => b.type === 'INFO')
-      ?.text ?? null
+    const summary =
+      localeData?.data?.sections
+        ?.find((sec: any) => sec.key === 'ARTICLE')
+        ?.blocks?.find((b: any) => b.type === 'INFO')
+        ?.text ?? null
 
-  return {
-    id: e.id,
-    slug: e.slug,
-    title: pickTitle(e.locales, locale, e.slug),
-    artistName: s.artistName ?? '',
-    artistSlug: s.artistSlug ?? null,
-    dateString: s.publishDate ?? s.dateString ?? null,
-    startDate: s.startDate ?? r?.start ?? null,
-    endDate: s.endDate ?? r?.end ?? null,
-    thumb: e.coverMedia?.meta?.thumb ?? e.coverMedia?.url ?? null,
-    year: yearOf(d),
-    summary,
-  }
-})
-
+    return {
+      id: e.id,
+      slug: e.slug,
+      title: pickTitle(e.locales, locale, e.slug),
+      artistName: s.artistName ?? '',
+      artistSlug: s.artistSlug ?? null,
+      dateString: s.publishDate ?? s.dateString ?? null,
+      startDate: s.startDate ?? r?.start ?? null,
+      endDate: s.endDate ?? r?.end ?? null,
+      thumb: e.coverMedia?.meta?.thumb ?? e.coverMedia?.url ?? null,
+      year: yearOf(d),
+      summary,
+    }
+  })
 
   return {
     tabs,
@@ -223,11 +230,10 @@ export async function listNews(
   }
 }
 
+/* =============================
+ * DETAIL (UNCHANGED)
+ * ============================= */
 
-/* -----------------------------
- * DETAIL (slug page)
- * Returns locales + media + localized captions + dates + scraped props
- * ----------------------------- */
 export async function getNewsItem(slug: string, locale?: Locale) {
   const entry = await prisma.entry.findFirst({
     where: {
@@ -295,10 +301,6 @@ export async function getNewsItem(slug: string, locale?: Locale) {
 
   if (!entry) return null
 
-  /* -----------------------------
-   * Locale ordering
-   * ----------------------------- */
-
   const localeOrder: Locale[] =
     locale === 'FA' ? ['FA', 'EN'] : ['EN', 'FA']
 
@@ -312,81 +314,17 @@ export async function getNewsItem(slug: string, locale?: Locale) {
     ? localesSorted.filter(l => l.locale === locale)
     : localesSorted
 
-  /* -----------------------------
-   * Scraped props
-   * ----------------------------- */
-
   const scraped =
-    typeof entry.props === 'object' &&
-    entry.props !== null &&
-    'scraped' in entry.props
-      ? (entry.props as { scraped?: { props?: Record<string, any> } }).scraped
-          ?.props ?? {}
+    typeof entry.props === 'object' && entry.props !== null
+      ? (entry.props as any).scraped?.props ?? {}
       : {}
+
   const unresolved =
-    typeof entry.props === 'object' &&
-    entry.props !== null &&
-    'unresolvedLinks' in entry.props
-      ? (entry.props as { unresolvedLinks?: Record<string, any> }).unresolvedLinks ?? {}
+    typeof entry.props === 'object' && entry.props !== null
+      ? (entry.props as any).unresolvedLinks ?? {}
       : {}
 
-  const artistSlug: string | null =
-    scraped.artistSlug ?? unresolved.artistSlug ?? null
-
-  const artistName: string =
-    scraped.artistName ?? ''
-
-  /* -----------------------------
-   * Cover
-   * ----------------------------- */
-
-  const coverMeta = (entry.coverMedia?.meta as any) ?? null
-
-  const cover = entry.coverMedia
-    ? {
-        url: entry.coverMedia.url,
-        thumb: coverMeta?.thumb ?? entry.coverMedia.url,
-        caption: entry.coverMedia.caption ?? null,
-        meta: coverMeta,
-      }
-    : null
-
-  /* -----------------------------
-   * Media (localized captions)
-   * ----------------------------- */
-
-  const media = entry.media.map(em => {
-    const emMeta = em.meta as any
-    const mMeta = em.media.meta as any
-
-    const caption =
-      locale === 'FA'
-        ? emMeta?.captionFa ?? mMeta?.captionFa ?? em.media.caption
-        : emMeta?.captionEn ?? mMeta?.captionEn ?? em.media.caption
-
-    return {
-      id: em.id,
-      role: em.role,
-      ord: em.ord ?? null,
-      meta: emMeta ?? null,
-      media: {
-        url: em.media.url,
-        kind: em.media.kind,
-        alt: em.media.alt,
-        caption,
-        thumb: emMeta?.thumb ?? mMeta?.thumb ?? null,
-        meta: mMeta ?? null,
-      },
-    }
-  })
-
-  /* -----------------------------
-   * Tags (locale-aware)
-   * ----------------------------- */
-
-  const tags = entry.tags
-    .map(t => t.tag)
-    .filter(t => !t.locale || t.locale === locale)
+  const coverMeta = entry.coverMedia?.meta as any
 
   return {
     id: entry.id,
@@ -395,13 +333,22 @@ export async function getNewsItem(slug: string, locale?: Locale) {
     status: entry.status,
     dates: entry.dates ?? null,
     props: entry.props ?? null,
-    coverMedia: cover,
+    coverMedia: entry.coverMedia
+      ? {
+          url: entry.coverMedia.url,
+          thumb: coverMeta?.thumb ?? entry.coverMedia.url,
+          caption: entry.coverMedia.caption ?? null,
+          meta: coverMeta ?? null,
+        }
+      : null,
     locales: finalLocales,
     artist: {
-      name: artistName,
-      slug: artistSlug,
+      name: scraped.artistName ?? '',
+      slug: scraped.artistSlug ?? unresolved.artistSlug ?? null,
     },
-    media,
-    tags,
+    media: entry.media,
+    tags: entry.tags
+      .map(t => t.tag)
+      .filter(t => !t.locale || t.locale === locale),
   }
 }

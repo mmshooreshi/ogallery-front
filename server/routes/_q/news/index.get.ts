@@ -9,11 +9,16 @@ function parseLocale(v: unknown): Locale | undefined {
   return up === 'EN' || up === 'FA' ? (up as Locale) : undefined
 }
 
-function parseYear(v: unknown): number | undefined {
+function parseIntParam(v: unknown): number | undefined {
   const s = Array.isArray(v) ? v[0] : v
   if (typeof s !== 'string') return undefined
   const n = Number.parseInt(s, 10)
   return Number.isFinite(n) ? n : undefined
+}
+
+function parseString(v: unknown): string | undefined {
+  if (typeof v === 'string' && v.trim() !== '') return v
+  return undefined
 }
 
 function nowMs() {
@@ -21,23 +26,28 @@ function nowMs() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const hr = (process as any)?.hrtime?.bigint?.()
   if (typeof hr === 'bigint') return Number(hr) / 1e6
-  if (typeof performance !== 'undefined' && typeof performance.now === 'function') return performance.now()
+  if (typeof performance !== 'undefined' && typeof performance.now === 'function')
+    return performance.now()
   return Date.now()
 }
 
 export default defineEventHandler(async (event) => {
   const q = getQuery(event)
+
   const locale = parseLocale(q.locale)
-  const year = parseYear(q.year)
+  const year = parseIntParam(q.year)
+  const month = parseIntParam(q.month)   // ✅ FIXED
+  const tag = parseString(q.tag)          // ✅ FIXED
 
   const t0 = nowMs()
   try {
-    return await listNews(locale, year)
+    return await listNews(locale, {
+      tag,
+      year,
+      month,
+    })
   } finally {
     const t1 = nowMs()
     console.log(`[API] GET /_q/news took ${(t1 - t0).toFixed(2)} ms`)
   }
 })
-
-
-

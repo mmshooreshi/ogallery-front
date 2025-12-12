@@ -102,12 +102,27 @@ function formatNewsDate(n: NewsItem): string {
 
   return `${parts.month} ${parts.day}, ${parts.year}`
 }
+
+
+watch(
+  () => payload.value?.items,
+  (items) => {
+    if (!items) return
+    for (const i of items) {
+      if (!i.thumb) continue
+      const img = new Image()
+      img.src = i.thumb
+    }
+  },
+  { immediate: true }
+)
+
 </script>
 
 <template>
 <main class="pb-10" style="min-height: 85vh;">
   <!-- Fixed Tabs (Tags) -->
-  <div class=" fixed py-[20px] left-0 right-0 z-10 bg-white/90 backdrop-blur border-b top-[56px]">
+  <div class="fixed py-[20px] left-0 right-0 z-1 bg-white/90 backdrop-blur border-b top-[56px]">
     <div class="flex justify-center flex-wrap text-md uppercase py-0">
       <template v-for="(t, i) in tabs" :key="t.key">
         <NuxtLink
@@ -158,8 +173,7 @@ function formatNewsDate(n: NewsItem): string {
     >
       No items found.
     </div>
-
-    <!-- LIST -->
+  <KeepAlive>
     <section class="cont px-4 max-w-screen-xl mx-auto">
       <article
         v-for="n in items"
@@ -171,14 +185,28 @@ function formatNewsDate(n: NewsItem): string {
           class="block no-underline shrink-0  w-[200px]"
           :to="`/news/${n.slug}`"
         >
-          <img
+          <!-- <img
             v-if="normalizeThumb(n.thumb)"
             :src="normalizeThumb(n.thumb) ?? ''"
             class="w-[200px] h-[200px] object-cover"
             loading="lazy"
             decoding="async"
             :alt="n.title"
+          /> -->
+
+          <NuxtImg
+            v-if="normalizeThumb(n.thumb)"
+            :src="normalizeThumb(n.thumb)"
+            width="200"
+            height="200"
+            class="w-[200px] h-[200px] object-cover"
+            :alt="n.title"
+            loading="eager"
+            decoding="async"
+            fetchpriority="high"
+            preload
           />
+
           <div
             v-else
             class="w-full h-[260px] bg-gray-100"
@@ -231,6 +259,7 @@ function formatNewsDate(n: NewsItem): string {
         </div>
       </article>
     </section>
+    </KeepAlive>
   </div>
 </main>
 

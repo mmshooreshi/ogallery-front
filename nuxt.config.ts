@@ -54,7 +54,11 @@ export default defineNuxtConfig({
 
   image: {
     format: ['avif', 'webp', 'jpeg', 'png'],
-    domains: ['localhost:3000', 'localhost:3001', 'ogallery.net']
+    domains: ['localhost:3000', 'localhost:3001', 'ogallery.net'],
+    provider: 'ipx',
+    ipx: {
+      maxAge: 60 * 60 * 24 * 365, // 1 year
+    },
 
 
     // domains: ['ogallery.net']
