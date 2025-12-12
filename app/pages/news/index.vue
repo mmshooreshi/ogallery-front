@@ -194,9 +194,9 @@ watch(
             :alt="n.title"
           /> -->
 
-          <NuxtImg
+          <img
             v-if="normalizeThumb(n.thumb)"
-            :src="normalizeThumb(n.thumb)"
+            :src="normalizeThumb(n.thumb) || ''"
             width="200"
             height="200"
             class="w-[200px] h-[200px] object-cover"
