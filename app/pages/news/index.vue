@@ -80,8 +80,13 @@ function artistHref(artistSlug: string | null) {
 
 function normalizeThumb(src: string | null) {
   if (!src) return null
-  // If backend sometimes returns ".../path", keep it as-is;
-  // If you have a known base URL, replace this with a proper join.
+
+  // reject directory URLs
+  if (src.endsWith('/')) return null
+
+  // basic image extension check
+  if (!/\.(jpg|jpeg|png|webp|avif)$/i.test(src)) return null
+
   return src
 }
 
@@ -116,11 +121,110 @@ watch(
         query: { locale: locale.value, tag: t.key },
         immediate: true,
       })
+      
+      
     }
   },
   { once: true }
 )
 
+const listSection = ref<HTMLElement | null>(null)
+
+const HEADER_OFFSET = 120
+const renderItems = ref<NewsItem[]>([])
+const isTransitioning = ref(false)
+
+const BLUR_DURATION = 350 // must match CSS
+const DATA_SWAP_DELAY = 200 // delay before swapping data
+
+function scrollListToTop(immediate = false) {
+  if (!listSection.value) return
+
+  const rect = listSection.value.getBoundingClientRect()
+  const scrollTop =
+    window.pageYOffset || document.documentElement.scrollTop
+
+  const targetY = rect.top + scrollTop - HEADER_OFFSET
+  console.log(window.scrollY,targetY+40)
+  if (window.scrollY < targetY+40 ) return
+
+  window.scrollTo({
+    top: targetY,
+    behavior: 'smooth',
+  })
+}
+
+let scrollTimer: number | null = null
+let blurTimer: number | null = null
+
+watch(
+  () => payload.value?.items,
+  (items, _, onCleanup) => {
+    if (!items) return
+
+    // First load → no animation
+    if (renderItems.value.length === 0) {
+      renderItems.value = items
+      return
+    }
+
+    let cancelled = false
+    onCleanup(() => (cancelled = true))
+
+    // Start blur-out
+    isTransitioning.value = true
+
+    // Wait so blur becomes visible
+    setTimeout(() => {
+      if (cancelled) return
+
+      // Swap data while blurred
+      renderItems.value = items
+
+      // Blur-in
+      setTimeout(() => {
+        if (!cancelled) {
+          isTransitioning.value = false
+        }
+      }, BLUR_DURATION)
+    }, DATA_SWAP_DELAY)
+  },
+  { immediate: true }
+)
+
+
+watch(
+  () => route.query.tag,
+  async (newTag, oldTag) => {
+    // clear any pending scroll
+    if (scrollTimer !== null) {
+      clearTimeout(scrollTimer)
+      scrollTimer = null
+    }
+
+    // SAME TAG CLICK → scroll immediately
+    if (newTag === oldTag) {
+      scrollListToTop(true)
+      return
+    }
+
+        isTransitioning.value = true
+  if (blurTimer) clearTimeout(blurTimer)
+
+    // DIFFERENT TAG → wait for render + 1s delay
+    await nextTick()
+
+  blurTimer = window.setTimeout(() => {
+    isTransitioning.value = false
+    blurTimer = null
+  }, 550)
+
+    scrollTimer = window.setTimeout(() => {
+      scrollListToTop()
+      scrollTimer = null
+    }, 550)
+  }
+)
 
 </script>
 
@@ -129,8 +233,8 @@ watch(
   <!-- Fixed Tabs (Tags) -->
   <div class="fixed py-[20px] left-0 right-0 z-1 bg-white/90 backdrop-blur border-b top-[56px]">
     <div class="flex justify-center flex-wrap text-md uppercase py-0">
-      <template v-for="(t, i) in tabs" :key="t.key">
-        <NuxtLink
+      <template  v-for="(t, i) in tabs" :key="t.key">
+        <NuxtLink @click="scrollListToTop()"
           class="mx-[6px] no-underline tracking-wide transition"
           :class="t.key === activeTag
             ? 'text-[#ffde00] font-semibold'
@@ -163,15 +267,15 @@ watch(
   </h1> -->
 
   <!-- States -->
-  <div v-if="pending" class="text-center text-sm text-black/50 py-20">
+  <!-- <div v-if="pending" class="text-center text-sm text-black/50 py-20">
     Loading…
   </div>
 
   <div v-else-if="error" class="text-center text-sm text-red-600 py-20">
     Could not load news.
-  </div>
+  </div> -->
 
-  <div v-else>
+  <div >
     <div
       v-if="items.length === 0"
       class="text-center text-sm text-black/50 py-20"
@@ -179,9 +283,11 @@ watch(
       No items found.
     </div>
   <!-- <KeepAlive> -->
-    <section class="cont px-4 max-w-screen-xl mx-auto">
+    <section   ref="listSection"
+      class="cont px-4 max-w-screen-xl mx-auto transition-layer"
+  :class="{ 'is-blurring': isTransitioning }">
       <article
-        v-for="n in items"
+        v-for="n in renderItems"
         :key="n.id"
         class="flex flex-col lg:flex-row gap-6 border-b border-black/10 pt[1.75rem] mt-12"
       >
@@ -303,6 +409,22 @@ watch(
 
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+
+.transition-layer {
+  transition:
+    opacity 300ms ease,
+    filter 300ms ease,
+    transform 300ms ease;
+  will-change: opacity, filter, transform;
+}
+
+.transition-layer.is-blurring {
+  opacity: 0;
+  filter: blur(8px);
+  transform: translateY(6px);
+  pointer-events: none;
 }
 
 </style>
