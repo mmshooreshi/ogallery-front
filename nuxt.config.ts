@@ -95,6 +95,11 @@ export default defineNuxtConfig({
 
     }
   },
+  vite: {
+    ssr: {
+      external: ['@prisma/client']
+    }
+  },
 
   // Nuxt Robots v5
   robots: {

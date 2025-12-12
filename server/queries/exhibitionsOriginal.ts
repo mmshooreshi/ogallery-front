@@ -1,4 +1,4 @@
-// server/queries/exhibitions.ts
+// server/queries/exhibitionsOriginal.ts
 
 import { prisma } from '~~/server/lib/prisma'
 import { Prisma } from '@prisma/client'

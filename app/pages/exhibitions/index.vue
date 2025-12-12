@@ -1,4 +1,4 @@
-<!-- pages/exhibitions/index.vue -->
+<!-- app/pages/exhibitions/index.vue -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useLocalCache } from '~/composables/useLocalCache'

@@ -1,3 +1,4 @@
+// app/utils/date.ts
 export function getJalaliParts(date: string) {
   const parts = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
     day: 'numeric',

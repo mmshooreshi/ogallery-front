@@ -1,9 +1,10 @@
+<!-- app/pages/admin/ogallery-artists.vue -->
 <script setup lang="ts">
 import type {
   ScrapedArtistListItem,
   ScrapedArtistRich,
 } from '~~/server/lib/scrapers/ogalleryArtists'
-import type { Status } from '@prisma/client'
+import type { Status } from '~~/server/types/prisma'
 
 type Row = ScrapedArtistListItem & {
   status: Status

@@ -19,10 +19,10 @@ export type ScrapedListItem = {
   sourceUrlFa: string // <-- Renamed to match ScrapedRich and external destination
 }
 
-export type ScrapeKind = 'ARTIST' | 'EXHIBITION';
+export type ScrapeKind = 'ARTIST' | 'EXHIBITION' | 'NEWS-ITEM';
 
 export type ScraperConfig = {
-  type: 'ARTIST' | 'EXHIBITION';
+  type: 'ARTIST' | 'EXHIBITION' | 'NEWS-ITEM';
   baseUrl: string;
   
   paths: {
@@ -38,7 +38,7 @@ export type ScraperConfig = {
     artistLink?: string;  // e.g., 'h2 a[href]'
     dateString?: string;  // e.g., 'h5'
     // ----------------------------
-    
+    publishDate?: string;
     // Bio/Body Section Configuration (Handles the complex find logic)
     body: {
       // 1. Preferred method (e.g., specific ID for Artist, null for Exhibition)
@@ -46,10 +46,26 @@ export type ScraperConfig = {
         headingTags: string[];
         keywords: { [key in Locale]: string[] };
         contentWrapper: string;
-
+        paragraphSelector: string;
         // NEW
         sectionKey: string;   // e.g. 'BIO', 'PRESS_RELEASE'
     };
+    metadata?: {
+    container: string;
+    fields?: Record<
+        string,
+        {
+        match?: RegExp;
+        position?: number;
+        }
+    >;
+    };
+
+    image?: {
+      selector?: string,
+      attr?: string,
+      alt?: string,
+    },
 
     // CV/Link Configuration (Handles finding external PDF links)
     cvLink: {
@@ -225,79 +241,152 @@ async fetchList(): Promise<ScrapedListItem[]> {
  * Scrapes non-locale-specific metadata (Artist, Dates) from the EN page.
  */
 private async scrapeMetadata(slug: string): Promise<Record<string, any>> {
-    const url = this.abs(this.config.paths.detail(slug, 'EN' as Locale));
-    if (!url) return {};
+  const url = this.abs(this.config.paths.detail(slug, 'EN' as Locale));
+  if (!url) return {};
 
-    const props: Record<string, any> = {};
-    
-    const artistSelector = this.config.selectors.artistLink;
-    const dateSelector = this.config.selectors.dateString;
+  const props: Record<string, any> = {};
 
-    if (!artistSelector && !dateSelector) return {};
-    
-    this.log('info', `[META] Fetching metadata from ${url}`);
+  const dateSelector = this.config.selectors.dateString;
+  const publishDateSel = this.config.selectors.publishDate;
+  const imgSel = this.config.selectors.image?.selector;
+  const imgAttr = this.config.selectors.image?.attr || 'src';
+  const imgAltAttr = this.config.selectors.image?.alt || 'alt';
 
-    try {
-        const html = await $fetch<string>(url);
-        const $ = load(html);
-        
-        // 1. Scrape Artist Link/Slug (Unchanged)
-        if (artistSelector) {
-            const artistEl = $(artistSelector).first();
-            const href = artistEl.attr('href') || '';
-            
-            if (href) {
-                const parts = new URL(href, this.config.baseUrl).pathname.split('/').filter(Boolean);
-                const artistSlug = parts.pop();
-                const artistName = artistEl.text().trim();
+  this.log('info', `[META] Fetching metadata from ${url}`);
 
-                if (artistSlug && artistName) {
-                    props.artistSlug = artistSlug;
-                    props.artistName = artistName;
-                }
-            }
-        }
-        
-        // 2. Scrape Date String AND Extract Range (FIXED LOGIC)
-        if (dateSelector) {
-            const dateString = $(dateSelector).first().text().trim();
-            if (dateString) {
-                props.dateString = dateString; // Keep raw string
-                
-                // Regex to match "Month Day1 - Day2 Year" (e.g., "December 5 - 19 2025")
-                const match = dateString.match(/([a-zA-Z]+)\s*(\d+)\s*-\s*(\d+)\s*(\d{4})/);
-                
-                if (match) {
-                    const [, monthName, dayStart, dayEnd, year] = match;
-                    
-                    // Helper function to reliably get a UTC date object from the string
-                    const getUTCDate = (month: string, day: string, yr: string): Date | null => {
-                        const date = new Date(`${month} ${day}, ${yr}`);
-                        if (isNaN(date.getTime())) return null;
-                        // Force a UTC Date at midnight for the given day
-                        return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-                    };
+  try {
+    const html = await $fetch<string>(url);
+    const $ = load(html);
 
-                    const startDate = getUTCDate(monthName, dayStart, year);
-                    const endDate = getUTCDate(monthName, dayEnd, year);
-
-                    if (startDate && endDate) {
-                        props.startDate = startDate.toISOString();
-                        props.endDate = endDate.toISOString();
-                    } else {
-                        this.log('warn', `[META] Failed to parse date components: ${dateString}`);
-                    }
-                } else {
-                     this.log('warn', `[META] Date string did not match expected range format: ${dateString}`);
-                }
-            }
-        }
-
-    } catch (e: any) {
-        this.log('error', `[META] Failed to scrape metadata`, e.message);
+    // Publish date (h5)
+    if (publishDateSel) {
+      const publishDate = $(publishDateSel).first().text().trim();
+      if (publishDate) props.publishDate = publishDate;
     }
 
-    return props;
+    // Featured image
+    if (imgSel) {
+      const img = $(imgSel).first();
+      const src = this.abs(img.attr(imgAttr) || img.attr('data-src') || null);
+      const alt = (img.attr(imgAltAttr) || '').trim() || null;
+      if (src) props.featuredImage = { url: src, alt };
+    }
+
+    // Event date range (h2.h6)
+    if (dateSelector) {
+      const raw = $(dateSelector).first().text().replace(/\s+/g, ' ').trim();
+      if (raw) {
+        props.dateString = raw;
+        const parsed = this.parseDateRange(raw);
+        if (parsed.startIso && parsed.endIso) {
+          props.startDate = parsed.startIso;
+          props.endDate = parsed.endIso;
+        }
+      }
+    }
+
+    // Artist links in body (Armory-style)
+    const artists = this.extractArtistLinksForNews($);
+    if (artists.length) {
+      props.artists = artists;
+    }
+
+    // Zakiehe-style event lines (div blocks after <p>)
+    if (this.config.selectors.metadata?.container) {
+      const lines = this.extractEventLinesForNews($, this.config.selectors.metadata.container);
+      if (lines.length) props.eventLines = lines;
+
+      // If dateString not found via h2, try to parse from lines as fallback
+      if (!props.dateString) {
+        const dateLine = lines.find((x) => /\d{4}/.test(x) && /-/.test(x)) || null;
+        if (dateLine) {
+          props.dateString = dateLine;
+          const parsed = this.parseDateRange(dateLine);
+          if (parsed.startIso && parsed.endIso) {
+            props.startDate = parsed.startIso;
+            props.endDate = parsed.endIso;
+          }
+        }
+      }
+    }
+
+  } catch (e: any) {
+    this.log('error', `[META] Failed to scrape metadata`, e.message);
+  }
+
+  return props;
+}
+
+private parseDateRange(raw: string): { startIso: string | null; endIso: string | null } {
+  const s = (raw || '').replace(/\s+/g, ' ').trim()
+  if (!s) return { startIso: null, endIso: null }
+
+  // Month D - D YYYY  (September 4 - 7 2025)
+  let m = s.match(/^([A-Za-z]+)\s+(\d{1,2})\s*-\s*(\d{1,2})\s+(\d{4})$/)
+  if (m) {
+    const [, month, d1, d2, y] = m
+    const start = new Date(`${month} ${d1}, ${y}`)
+    const end = new Date(`${month} ${d2}, ${y}`)
+    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+      const sIso = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())).toISOString()
+      const eIso = new Date(Date.UTC(end.getFullYear(), end.getMonth(), end.getDate())).toISOString()
+      return { startIso: sIso, endIso: eIso }
+    }
+  }
+
+  // Month D - Month D YYYY (rare but support)
+  m = s.match(/^([A-Za-z]+)\s+(\d{1,2})\s*-\s*([A-Za-z]+)\s+(\d{1,2})\s+(\d{4})$/)
+  if (m) {
+    const [, m1, d1, m2, d2, y] = m
+    const start = new Date(`${m1} ${d1}, ${y}`)
+    const end = new Date(`${m2} ${d2}, ${y}`)
+    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+      const sIso = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())).toISOString()
+      const eIso = new Date(Date.UTC(end.getFullYear(), end.getMonth(), end.getDate())).toISOString()
+      return { startIso: sIso, endIso: eIso }
+    }
+  }
+
+  return { startIso: null, endIso: null }
+}
+
+private extractEventLinesForNews($: any, containerSel: string): string[] {
+  // Handles Zakiehe-style block: <div>Venue</div><div>Opening...</div>...
+  const container = $(containerSel).first()
+  if (!container.length) return []
+
+  const lines: string[] = []
+  container.children('div').each((_i: number, el: any) => {
+    const t = $(el).text().replace(/\s+/g, ' ').trim()
+    if (t) lines.push(t)
+  })
+  return lines
+}
+
+private extractArtistLinksForNews($: any): Array<{ slug: string; name: string; href: string }> {
+  const out: Array<{ slug: string; name: string; href: string }> = []
+  const seen = new Set<string>()
+
+  $('a[href]').each((_i: number, el: any) => {
+    const href = ($(el).attr('href') || '').trim()
+    if (!href) return
+
+    let u: URL
+    try { u = new URL(href, this.config.baseUrl) } catch { return }
+
+    const parts = u.pathname.split('/').filter(Boolean)
+    // /en/artists/{slug}
+    if (parts.length === 3 && (parts[1] || '').toLowerCase() === 'artists') {
+      const slug = parts[2]
+      const name = $(el).text().replace(/\s+/g, ' ').trim()
+      if (!slug || !name) return
+      if (seen.has(slug)) return
+      seen.add(slug)
+      out.push({ slug, name, href: this.abs(href) || href })
+    }
+  })
+
+  return out
 }
 
 // server/lib/ogallery/engine.ts
@@ -702,3 +791,4 @@ private async scrapeMedia(slug: string): Promise<{ works: ScrapedWork[], install
     }
   }
 }
+

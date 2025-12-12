@@ -1,9 +1,31 @@
+<!-- app/components/Admin/ScraperPipeline.vue -->
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { Status, type Locale } from '@prisma/client'
+// app/components/Admin/ScraperPipeline.vue
+import type { Status, Locale } from '~~/server/types/prisma'
+
 // Import ScrapedListItem type
 import type { ScrapedRich, ScrapeLog, ScrapeKind, ScrapedListItem } from '~~/server/lib/ogallery/engine' 
 const fixingDates = ref(false)
+type TagItem = {
+  id: number
+  slug: string
+  name: string
+  locale: Locale | null
+}
+
+const tags = ref<TagItem[]>([])
+const selectedTagIds = ref<number[]>([])
+const loadingTags = ref(false)
+async function loadTags() {
+  loadingTags.value = true
+  try {
+    const res = await $fetch<{ tags: TagItem[] }>('/_admin/tags')
+    tags.value = res.tags
+  } finally {
+    loadingTags.value = false
+  }
+}
 
 async function fixDates() {
   fixingDates.value = true
@@ -22,7 +44,7 @@ const listPath = ref('')
 // Define props to make the component configurable
 const props = defineProps<{
   kind: ScrapeKind // 'ARTIST' or 'EXHIBITION' (Prisma Kind)
-  apiPath: 'artists' | 'exhibitions' // URL segment for API and Admin UI
+  apiPath: 'artists' | 'exhibitions' | 'news' // URL segment for API and Admin UI
   title: string
 }>()
 // --- Types ---
@@ -109,7 +131,7 @@ async function loadDetails (row: Row) {
   row.logs = undefined // Clear old logs
   try {
     const res = await $fetch<{ data: ScrapedRich, logs: ScrapeLog[] }>(
-      `${baseUrl.value}/${encodeURIComponent(row.slug)}`,{method: 'POST'}
+      `${baseUrl.value}/${row.slug}`,{method: 'POST'}
     )
     row.details = res.data
     row.logs = res.logs // Capture logs for info modal
@@ -148,6 +170,7 @@ async function importRow (row: Row) {
       body: {
         data: row.details,
         status: row.status,
+        tagIds: selectedTagIds.value,
       },
     })
     row.imported = true
@@ -179,6 +202,7 @@ async function importAllLoaded() {
 onMounted(() => {
   loadConfig()
   loadList()
+  loadTags()
 
 })
 </script>
@@ -195,10 +219,29 @@ onMounted(() => {
     <input
       v-model="listPath"
       class="border px-2 py-1 text-xs w-72"
-      placeholder="/en/exhibitions/2022"
+      :placeholder="`/en/${props.apiPath}/2022`"
     >
   </div>
   
+  <div>
+  <label class="block text-xs font-medium mb-1">
+    Apply Tag(s)
+  </label>
+  <select
+    v-model="selectedTagIds"
+    multiple
+    class="border px-2 py-1 text-xs w-64 h-24"
+  >
+    <option
+      v-for="tag in tags"
+      :key="tag.id"
+      :value="tag.id"
+    >
+      {{ tag.name }} <span v-if="tag.locale">({{ tag.locale }})</span>
+    </option>
+  </select>
+</div>
+
       <button
         type="button"
         class="px-3 py-2 text-sm border rounded bg-black text-white"

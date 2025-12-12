@@ -1,4 +1,4 @@
-// server/routes/_admin/scrape/[kind]/[slug].get.ts (New location)
+// server/routes/_admin/scrape/[kind]/[slug].post.ts
 import { defineEventHandler, getRouterParam, createError } from 'h3';
 import { OGalleryScraper, ScraperConfig } from '~~/server/lib/ogallery/engine';
 import { Configs } from '~~/server/lib/ogallery/configs';
@@ -18,14 +18,16 @@ function buildConfig(
 }
 
 
+
+
 export default defineEventHandler(async (event) => {
   const kindParam = getRouterParam(event, 'kind') as keyof typeof Configs;
   const slug = getRouterParam(event, 'slug'); 
 
-  const ExhibitionConfig = Configs[kindParam];
+  const Config = Configs[kindParam];
   const body = await readBody<{ override?: ScraperConfigOverride }>(event)
 
-  const config = buildConfig(ExhibitionConfig, body?.override)
+  const config = buildConfig(Config, body?.override)
 
   if (!config) {
     throw createError({ statusCode: 400, message: `Invalid kind: ${kindParam}` });

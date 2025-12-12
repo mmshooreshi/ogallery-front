@@ -1,3 +1,4 @@
+<!-- app/pages/exhibitions/[slug].vue -->
 <script setup lang="ts">
 import { useLocalCache } from '~/composables/useLocalCache'
 import { useMultiLingual } from '~/composables/useMultiLingual'

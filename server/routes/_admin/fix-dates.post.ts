@@ -1,4 +1,4 @@
-// server/routes/_admin/fix/exhibition-dates.post.ts
+// server/routes/_admin/fix-dates.post.ts
 import { prisma } from '~~/server/lib/prisma'
 import { parseDateRange } from '~/utils/date'
 
