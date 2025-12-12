@@ -1,3 +1,4 @@
+<!-- app/pages/artists/2.[slug].vue -->
 <script setup lang="ts">
 import {useMultiLingual} from '~/composables/useMultiLingual'
 const {t} = useMultiLingual()

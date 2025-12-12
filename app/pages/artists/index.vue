@@ -1,3 +1,4 @@
+<!-- app/pages/artists/index.vue -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useLocalCache } from '~/composables/useLocalCache'

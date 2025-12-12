@@ -1,22 +1,22 @@
-// server/routes/_admin/ogallery-artists/index.post.ts
+// server/routes/_admin/ogallery-exhibitions/index.post.ts
 import { defineEventHandler, readBody, createError } from 'h3'
 import { prisma } from '~~/server/lib/prisma'
-import type { ScrapedArtistRich } from '~~/server/lib/scrapers/ogalleryArtists'
+import type { ScrapedExhibitionRich } from '~~/server/lib/scrapers/ogalleryExhibitions'
 import { Status, type Locale } from '@prisma/client'
 
 type ImportPayload = {
   // You can send the full scraped object from the admin UI
-  artist: ScrapedArtistRich
+  exhibition: ScrapedExhibitionRich
   status?: Status
 }
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<ImportPayload>(event)
-  if (!body?.artist || !body.artist.slug) {
-    throw createError({ statusCode: 400, statusMessage: 'Missing artist payload' })
+  if (!body?.exhibition || !body.exhibition.slug) {
+    throw createError({ statusCode: 400, statusMessage: 'Missing exhibition payload' })
   }
 
-  const { artist } = body
+  const { exhibition } = body
   const status = body.status ?? Status.PUBLISHED
 
   // 1) Upsert Entry
@@ -24,24 +24,24 @@ export default defineEventHandler(async (event) => {
     where: {
       kind_slug: {
         kind: 'ARTIST',
-        slug: artist.slug,
+        slug: exhibition.slug,
       },
     },
     update: {
       status,
       // store some structural references in props
       props: {
-        sourceUrlEn: artist.sourceUrlEn,
-        sourceUrlFa: artist.sourceUrlFa,
+        sourceUrlEn: exhibition.sourceUrlEn,
+        sourceUrlFa: exhibition.sourceUrlFa,
       },
     },
     create: {
       kind: 'ARTIST',
-      slug: artist.slug,
+      slug: exhibition.slug,
       status,
       props: {
-        sourceUrlEn: artist.sourceUrlEn,
-        sourceUrlFa: artist.sourceUrlFa,
+        sourceUrlEn: exhibition.sourceUrlEn,
+        sourceUrlFa: exhibition.sourceUrlFa,
       },
     },
   })
@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
   let ord = 0
 
   // CV and portfolio as media (optional)
-  const enLocale = artist.locales.find(l => l.locale === 'EN' as Locale)
+  const enLocale = exhibition.locales.find(l => l.locale === 'EN' as Locale)
   if (enLocale?.cvUrl) {
     const m = await upsertMedia(enLocale.cvUrl, { kind: 'DOCUMENT' })
     entryMediaToCreate.push({
@@ -84,7 +84,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Works
-  for (const w of artist.works) {
+  for (const w of exhibition.works) {
     const m = await upsertMedia(w.full, {
       kind: 'IMAGE',
       caption: w.captionEn || w.captionFa || null,
@@ -105,7 +105,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Installations
-  for (const inst of artist.installations) {
+  for (const inst of exhibition.installations) {
     const m = await upsertMedia(inst.full, {
       kind: 'IMAGE',
     })
@@ -142,7 +142,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 5) Upsert EntryLocale for EN + FA
-  for (const loc of artist.locales) {
+  for (const loc of exhibition.locales) {
     const locale = loc.locale as Locale
 
     await prisma.entryLocale.upsert({
@@ -157,11 +157,11 @@ export default defineEventHandler(async (event) => {
         title: loc.title ?? undefined,
         bodyHtml: loc.bioHtml ?? undefined,
         data: {
-          works: artist.works,
-          installations: artist.installations,
+          works: exhibition.works,
+          installations: exhibition.installations,
           cvUrl: loc.cvUrl,
           portfolioUrl: loc.portfolioUrl,
-          sourceUrl: locale === 'EN' ? artist.sourceUrlEn : artist.sourceUrlFa,
+          sourceUrl: locale === 'EN' ? exhibition.sourceUrlEn : exhibition.sourceUrlFa,
         },
       },
       create: {
@@ -171,11 +171,11 @@ export default defineEventHandler(async (event) => {
         title: loc.title ?? undefined,
         bodyHtml: loc.bioHtml ?? undefined,
         data: {
-          works: artist.works,
-          installations: artist.installations,
+          works: exhibition.works,
+          installations: exhibition.installations,
           cvUrl: loc.cvUrl,
           portfolioUrl: loc.portfolioUrl,
-          sourceUrl: locale === 'EN' ? artist.sourceUrlEn : artist.sourceUrlFa,
+          sourceUrl: locale === 'EN' ? exhibition.sourceUrlEn : exhibition.sourceUrlFa,
         },
       },
     })

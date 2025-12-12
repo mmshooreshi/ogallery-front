@@ -1,6 +1,6 @@
 <!-- app/layouts/default.vue -->
 <template>
-  <div class="fixMobileSelect">
+  <div class="fixMobileSelect bg-[#fbfbfb]">
     <SiteHeader2 />
 
     <main class="min-h-[100dvh]  pt-16 px-0">

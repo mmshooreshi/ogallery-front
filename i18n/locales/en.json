@@ -14,5 +14,23 @@
       "loading": "Loading…",
       "error": "Error loading artist."
     }
+  },
+  "exhibitions": {
+    "detail": {
+      "tabs": {
+        "bio": "PRESS RELEASE",
+        "selectedWorks": "Works",
+        "installationViews": "Installation Views"
+      },
+      "bioHeading": "PRESS RELEASE",
+      "cvLink": "Download PDF",
+      "bioFallback": "PRESS RELEASE coming soon.",
+      "notFound": "Exhibition not found.",
+      "backToList": "← All exhibitions",
+      "loading": "Loading…",
+      "error": "Error loading exhibition."
+    }
   }
+  
+
 }

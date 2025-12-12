@@ -1,4 +1,4 @@
-// scripts/import-ogallery-artists.ts
+// scripts/import-artist.ts
 import { PrismaClient, Locale, Status } from '@prisma/client'
 import fetch from 'node-fetch'
 import { load } from 'cheerio'

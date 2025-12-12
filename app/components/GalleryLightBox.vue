@@ -107,7 +107,7 @@ const zoomRef = ref()
         <NuxtImg
           :src="s.media.url"
           :alt="s.media.alt || ''"
-          class="h-full w-max object-contain"
+          class="h-full w-min min-w-[30px] object-contain"
         />
       </div>
       </div>

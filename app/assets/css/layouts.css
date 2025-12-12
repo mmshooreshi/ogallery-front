@@ -1,0 +1,41 @@
+@media (min-width: 320px) {
+    .og-container, .og-container-sn {
+        max-width: 320px;
+    }
+}
+@media (min-width: 576px) {
+    .og-container, .og-container-sm, .og-container-sn {
+        max-width: 540px;
+    }
+}
+
+@media (min-width: 768px) {
+    .og-container, .og-container-md, .og-container-sm, .og-container-sn {
+        max-width: 720px;
+    }
+}
+
+@media (min-width: 992px) {
+    .og-container, .og-container-lg, .og-container-md, .og-container-sm, .og-container-sn {
+        max-width: 960px;
+    }
+}
+@media (min-width: 1200px) {
+    .og-container, .og-container-lg, .og-container-md, .og-container-sm, .og-container-sn, .og-container-xl {
+        max-width: 1140px;
+    }
+}
+@media (min-width: 1400px) {
+    .og-container, .og-container-lg, .og-container-md, .og-container-sm, .og-container-sn, .og-container-xl, .og-container-xxl {
+        max-width: 1320px;
+    }
+}
+.og-container, .og-container-fluid, .og-container-lg, .og-container-md, .og-container-sm, .og-container-sn, .og-container-xl, .og-container-xxl {
+    --bs-gutter-x: 1.5rem;
+    --bs-gutter-y: 0;
+    width: 100%;
+    padding-right: calc(var(--bs-gutter-x) * .5);
+    padding-left: calc(var(--bs-gutter-x) * .5);
+    margin-right: auto;
+    margin-left: auto;
+}

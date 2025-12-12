@@ -1,6 +1,6 @@
-// server/routes/_admin/ogallery-artists/[slug].get.ts
+// server/routes/_admin/ogallery-exhibitions/[slug].get.ts
 import { defineEventHandler, getRouterParam, createError } from 'h3'
-import { scrapeArtistRich } from '~~/server/lib/scrapers/ogalleryArtists'
+import { scrapeExhibitionRich } from '~~/server/lib/scrapers/ogalleryExhibitions'
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, 'slug')
@@ -8,6 +8,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Missing slug' })
   }
 
-  const data = await scrapeArtistRich(slug)
+  const data = await scrapeExhibitionRich(slug)
   return data
 })

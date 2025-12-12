@@ -1,12 +1,16 @@
 // scripts/ex.js
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+
+const prisma = new PrismaClient({
+  datasources: { db: { url: process.env.DATABASE_URL_REMOTE } }
+})
 
 async function main() {
   const result = await prisma.entry.updateMany({
     where: {
-      kind: 'exhibited artist',
+      id: { gt: 27 },
+      kind: 'ARTIST',
     },
     data: {
       kind: 'EXHIBITED-ARTIST',
