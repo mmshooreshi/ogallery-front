@@ -47,7 +47,10 @@ const selectedTag = computed(() => {
   return t.trim() || 'all'
 })
 
-const key = computed(() => `news:list:${locale.value}:${selectedTag.value}`)
+// const key = computed(() => `news:list:${locale.value}:${selectedTag.value}`)
+const key = computed(() =>
+  `news:list:${locale.value}:tag=${selectedTag.value || 'all'}`
+)
 
 const { data: payload, pending, error } = useLocalCache<NewsListResponse>(
   () => key.value,
@@ -103,19 +106,21 @@ function formatNewsDate(n: NewsItem): string {
   return `${parts.month} ${parts.day}, ${parts.year}`
 }
 
-
 watch(
-  () => payload.value?.items,
-  (items) => {
-    if (!items) return
-    for (const i of items) {
-      if (!i.thumb) continue
-      const img = new Image()
-      img.src = i.thumb
+  () => tabs.value,
+  (tabs) => {
+    if (!tabs?.length) return
+    for (const t of tabs) {
+      useFetch('/_q/news', {
+        key: `news:list:${locale.value}:tag=${t.key}`,
+        query: { locale: locale.value, tag: t.key },
+        immediate: true,
+      })
     }
   },
-  { immediate: true }
+  { once: true }
 )
+
 
 </script>
 
@@ -173,7 +178,7 @@ watch(
     >
       No items found.
     </div>
-  <KeepAlive>
+  <!-- <KeepAlive> -->
     <section class="cont px-4 max-w-screen-xl mx-auto">
       <article
         v-for="n in items"
@@ -259,7 +264,7 @@ watch(
         </div>
       </article>
     </section>
-    </KeepAlive>
+    <!-- </KeepAlive> -->
   </div>
 </main>
 

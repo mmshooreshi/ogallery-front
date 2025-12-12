@@ -1,5 +1,5 @@
 // server/routes/_q/news/index.get.ts
-import { defineEventHandler, getQuery } from 'h3'
+import { defineEventHandler, getQuery, setHeader } from 'h3'
 import type { Locale } from '@prisma/client'
 import { listNews } from '~~/server/queries/news'
 
@@ -21,33 +21,17 @@ function parseString(v: unknown): string | undefined {
   return undefined
 }
 
-function nowMs() {
-  // monotonic-ish
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const hr = (process as any)?.hrtime?.bigint?.()
-  if (typeof hr === 'bigint') return Number(hr) / 1e6
-  if (typeof performance !== 'undefined' && typeof performance.now === 'function')
-    return performance.now()
-  return Date.now()
-}
-
 export default defineEventHandler(async (event) => {
   const q = getQuery(event)
 
   const locale = parseLocale(q.locale)
   const year = parseIntParam(q.year)
-  const month = parseIntParam(q.month)   // ✅ FIXED
-  const tag = parseString(q.tag)          // ✅ FIXED
+  const month = parseIntParam(q.month)
+  const tag = parseString(q.tag)
 
-  const t0 = nowMs()
-  try {
-    return await listNews(locale, {
-      tag,
-      year,
-      month,
-    })
-  } finally {
-    const t1 = nowMs()
-    console.log(`[API] GET /_q/news took ${(t1 - t0).toFixed(2)} ms`)
-  }
+  /* 🔥 HARD CACHE HEADERS */
+  setHeader(event, 'Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600')
+  setHeader(event, 'Vary', 'Accept-Encoding')
+
+  return listNews(locale, { tag, year, month })
 })

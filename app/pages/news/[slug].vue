@@ -2,30 +2,32 @@
 <script setup lang="ts">
 import { useLocalCache } from '~/composables/useLocalCache'
 import { useMultiLingual } from '~/composables/useMultiLingual'
-import {
-  getJalaliParts,
-  getGregorianParts,
-} from '~/utils/date'
+import { getJalaliParts, getGregorianParts } from '~/utils/date'
 
 interface MediaItem {
   id: string
   role: string
-  media: { url: string; alt?: string | null; caption?: string | null }
+  media: {
+    url: string
+    alt?: string | null
+    caption?: string | null
+    meta?: any
+  }
 }
 
 interface NewsItem {
   media?: MediaItem[]
+  locales?: any[]
+  dates?: any
+  artist?: { name: string; slug: string | null }
 }
-
-const LBL = '[news/[slug]]'
-const log = (...a: any[]) => console.log(LBL, ...a)
 
 const route = useRoute()
 const { locale } = useI18n()
 const { t } = useMultiLingual()
 
 const slug = computed(() => String(route.params.slug))
-const key = computed(() => `newsItem:${locale.value}-${slug.value}`)
+const key = computed(() => `news:item:${locale.value}:${slug.value}`)
 
 const { data: newsItem, pending, error } = useLocalCache<NewsItem>(
   () => key.value,
@@ -33,9 +35,12 @@ const { data: newsItem, pending, error } = useLocalCache<NewsItem>(
     $fetch(`/_q/news/${encodeURIComponent(slug.value)}`, {
       query: { locale: locale.value },
     }),
-  { ttlMs: 60_000, swr: true, initial: {} as NewsItem },
+  { ttlMs: 60_000, swr: true, initial: {} as NewsItem }
 )
 
+/* -----------------------------
+ * Lightbox
+ * ----------------------------- */
 const showLightbox = ref(false)
 const lightboxIndex = ref(0)
 
@@ -44,190 +49,114 @@ function openLightbox(i: number) {
   showLightbox.value = true
 }
 
-const loc = computed(() => (newsItem.value as any)?.locales?.[0] ?? null)
+/* -----------------------------
+ * Localized content
+ * ----------------------------- */
+const loc = computed(() => newsItem.value?.locales?.[0] ?? null)
 
 const installationSlides = computed(
-  () => newsItem.value?.media?.filter(m => m.role === 'INSTALLATION') ?? [],
+  () => newsItem.value?.media?.filter(m => m.role === 'INSTALLATION') ?? []
 )
 
 const selectedWorks = computed(
   () =>
     newsItem.value?.media?.filter(
-      m => m.role === 'WORK' || m.role === 'SELECTED_WORK',
-    ) ?? [],
+      m => m.role === 'WORK' || m.role === 'SELECTED_WORK'
+    ) ?? []
 )
 
-const artist = computed(() => {
-  return (
-    (loc.value as any)?.artist ||
-    (newsItem.value as any)?.artist ||
-    null
-  )
-})
+const artist = computed(
+  () => loc.value?.artist || newsItem.value?.artist || null
+)
 
+/* -----------------------------
+ * Date range
+ * ----------------------------- */
 const dateRange = computed(() => {
   const start =
-    (loc.value as any)?.dates?.range?.start ||
-    (newsItem.value as any)?.dates?.range?.start
+    loc.value?.dates?.range?.start ??
+    newsItem.value?.dates?.range?.start
 
   const end =
-    (loc.value as any)?.dates?.range?.end ||
-    (newsItem.value as any)?.dates?.range?.end
+    loc.value?.dates?.range?.end ??
+    newsItem.value?.dates?.range?.end
 
   if (!start && !end) return null
 
   const s = start || end
   const e = end || start
 
-  // Persian (Jalali)
   if (locale.value === 'FA') {
-    const sP = getJalaliParts(s)
-    const eP = getJalaliParts(e)
-
-    if (!sP || !eP) return null
-
-    // Same month/year assumed (as per requirement)
-    return `${sP.day} - ${eP.day} ${eP.month} ${eP.year}`
+    const sp = getJalaliParts(s)
+    const ep = getJalaliParts(e)
+    if (!sp || !ep) return null
+    return `${sp.day} - ${ep.day} ${ep.month} ${ep.year}`
   }
 
-  // Gregorian
-  const sP = getGregorianParts(s, locale.value)
-  const eP = getGregorianParts(e, locale.value)
-
-  if (!sP || !eP) return null
-
-  return `${sP.month} ${sP.day} - ${eP.day} ${eP.year}`
+  const sp = getGregorianParts(s, locale.value)
+  const ep = getGregorianParts(e, locale.value)
+  if (!sp || !ep) return null
+  return `${sp.month} ${sp.day} - ${ep.day} ${ep.year}`
 })
 </script>
 
-
-
 <template>
-  <div class="px-0 relative z-0 mt-[56px]">
-    <div class="pt-5 mt-4 og-container ">
-    <!-- Fixed NewsItem Header -->
-    
-    <!-- border-b border-b-0.5 border-black/20 z-10 border-b-solid -->
-    <div
-      id="newsItem-header"
-      class=" top-[60px] left-0 right-0 bg-white"
-    >
-      <div
-        class="max-w-screen-lg mx-auto flex flex-col md:flex-row items-start md:items-center justify-between px-4 sm:px-4 pb-1"
-      >
-        <div
-          class="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full"
-        >
-      <div class="flex flex-col gap-0">
-        <div
-          class="mt-0 mb-[0.5rem] font-light text-2xl md:text-3xl   text-[#595a5c] text-nowrap"
-        >
-          {{ loc?.title || 'NewsItem' }}
-        </div>
+  <div class="relative mt-[56px]">
+    <div class="max-w-screen-lg mx-auto px-4 pt-8">
+
+      <!-- HEADER -->
+      <header class="mb-10">
+        <h1 class="text-2xl md:text-3xl font-light text-[#595a5c]">
+          {{ loc?.title || 'News' }}
+        </h1>
 
         <NuxtLink
           v-if="artist"
           :to="`/artists/${artist.slug}`"
-          class="mt-0 mb-4 text-xl md:text-2xl no-underline text-black/60 hover:text-yellow-500 transition"
+          class="block mt-2 text-xl text-black/60 hover:text-yellow-500 transition no-underline"
         >
           {{ artist.name }}
         </NuxtLink>
 
-        <div
-          v-if="dateRange"
-          class="text-md md:text-lg text-black/60 tracking-tight"
-        >
+        <div v-if="dateRange" class="mt-2 text-lg text-black/60">
           {{ dateRange }}
         </div>
-      </div>
+      </header>
 
-          <!-- <nav
-            class="border-t border-t-0 border-black/20 border-t-solid flex flex-wrap flex-row sm:w-max self-end -mt-2 pt-2 gap-2 text-sm md:text-md md:text-base uppercase"
-          >
-            <a
-              href="#bio"
-              class="no-underline tracking-tight text-black/60 hover:text-yellow-500 transition"
-            >
-              {{ t('news.detail.tabs.bio') }}
-            </a>
-            <span class="text-black/20 inline">|</span>
-            <a
-              href="#works"
-              class="no-underline tracking-tight text-black/60 hover:text-yellow-500 transition"
-            >
-              {{ t('news.detail.tabs.selectedWorks') }}
-            </a>
-            <span class="text-black/20 inline">|</span>
-            <a
-              href="#installation"
-              class="no-underline tracking-tight text-black/60 hover:text-yellow-500 transition"
-            >
-              {{ t('news.detail.tabs.installationViews') }}
-            </a>
-          </nav> -->
-        </div>
-      </div>
-    </div>
-
-    <!-- Push content below fixed header -->
-    <div class=" max-w-screen-lg mx-auto px-4 z-0">
+      <!-- BODY -->
       <article v-if="newsItem">
-        <!-- TEXT + PDF -->
-        <div id="bio" class="flex items-center justify-between">
+        <!-- TEXT -->
+        <section id="bio">
           <div
-            class="text-[23px] !font-thin uppercase tracking-tight text-gray-800/70  text-uppercase mt-10 mb-7"
-          >
-            {{ t('news.detail.bioHeading') }}
-          </div>
+            v-if="loc?.bodyHtml"
+            class="prose prose-lg max-w-none text-gray-700/85"
+            v-html="loc.bodyHtml"
+          />
+        </section>
 
-          <a
-            v-if="newsItem.media?.find(m => m.role === 'CV')"
-            :href="newsItem.media.find(m => m.role === 'CV')?.media.url"
-            target="_blank"
-            rel="noopener"
-            class="no-underline text-md uppercase underline text-gray-600 hover:text-yellow-500 transition mr-0"
-          >
-            {{ t('news.detail.cvLink') }}
-          </a>
-        </div>
-
-        <!-- Text Content -->
-        <div
-          v-if="loc?.bodyHtml"
-          class="prose prose-sm sm:prose mt-0 mb-4 lg:prose-lg prose-p:mt-4 prose-p:mb-0 prose-p:second:mt-0 max-w-none text-base text-gray-700/85 leading-relaxed"
-          v-html="loc.bodyHtml"
-        />
-        <p v-else class="opacity-70">
-          {{ t('news.detail.bioFallback') }}
-        </p>
-
-        <!-- Selected Works -->
-        <section
-          id="works"
-          v-if="selectedWorks.length"
-          class="mt-12 scroll-mt-20"
-        >
-          <h2
-            class="text-2xl !font-light text-gray-700/90 mb-4 uppercase tracking-tight"
-          >
+        <!-- SELECTED WORKS -->
+        <section v-if="selectedWorks.length" id="works" class="mt-14">
+          <h2 class="text-2xl font-light uppercase mb-4">
             {{ t('news.detail.tabs.selectedWorks') }}
           </h2>
 
-          <div
-            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-          >
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div
               v-for="(m, i) in selectedWorks"
               :key="m.media.url"
-              @click="openLightbox(i)"
               class="cursor-pointer"
+              @click="openLightbox(i)"
             >
-              <img
+              <NuxtImg
                 :src="m.media.url"
-                class="w-full aspect-square object-cover hover:scale-95 hover:opacity-80 transition-transform"
+                width="400"
+                height="400"
+                class="w-full aspect-square object-cover transition hover:opacity-80"
                 :alt="m.media.alt || ''"
-                loading="lazy"
+                loading="eager"
                 decoding="async"
+                fetchpriority="high"
+                preload
               />
             </div>
           </div>
@@ -240,15 +169,13 @@ const dateRange = computed(() => {
           />
         </section>
 
-        <!-- Installation Views -->
+        <!-- INSTALLATION -->
         <section
-          id="installation"
           v-if="installationSlides.length"
-          class="mt-12"
+          id="installation"
+          class="mt-14"
         >
-          <h2
-            class="text-2xl font-light text-gray-700/90 mb-4 uppercase tracking-tight"
-          >
+          <h2 class="text-2xl font-light uppercase mb-4">
             {{ t('news.detail.tabs.installationViews') }}
           </h2>
 
@@ -256,36 +183,9 @@ const dateRange = computed(() => {
         </section>
       </article>
 
-      <p v-else class="opacity-70">
+      <div v-else class="opacity-60">
         {{ t('news.detail.notFound') }}
-      </p>
-
-      <footer class="mt-8">
-        
-<!--         
-        <NuxtLink
-          to="/news"
-          class="text-sm underline hover:text-yellow-500 transition no-underline"
-        >
-         {{ t('news.detail.backToList') }}
-        </NuxtLink> -->
-        
-      </footer>
-    </div>
-
-    <!-- <div
-      v-if="pending"
-      class="fixed z-20 bottom-6 py-0 text-black/70 bg-yellow-500/60 px-2"
-    >
-      {{ t('news.detail.loading') }}
-    </div>
-
-    <div
-      v-else-if="error"
-      class="fixed z-20 bottom-6 py-0 text-red-800/80 bg-red-500/60 px-2"
-    >
-      {{ t('news.detail.error') }}
-    </div> -->
+      </div>
     </div>
   </div>
 </template>
@@ -296,16 +196,4 @@ const dateRange = computed(() => {
 #installation {
   scroll-margin-top: 160px;
 }
-
-@media (max-width: 767px) {
-  #bio,
-  #works,
-  #installation {
-    scroll-margin-top: 160px;
-  }
-}
-:deep(.prose p:nth-of-type(2)) {
-  margin-inline: -5px;
-}
-
 </style>
