@@ -217,10 +217,10 @@ useSeoMeta({ title: 'Artists' })
               <li
                 v-for="doc in group.items"
                 :key="doc.slug"
-                class="h-8"
+                class="h-max min-h-4 leading-relaxed  -mb-1 pt-1"
               >
                 <NuxtLink
-                  class="en-letter"
+                  class="tracking-[1px] lg:!tracking-[2px] en-letter pr-1"
                   :id="doc.slug"
                   :to="`/artists/${doc.slug}`"
                   @mouseenter="hoveredSlug = doc.slug"
@@ -265,11 +265,12 @@ useSeoMeta({ title: 'Artists' })
     @click="showExhibited = !showExhibited"
   >
     <span
-      class="inline-block transition-transform duration-200 text-sm"
-      :class="showExhibited ? 'rotate-90' : ''"
+      class="inline-block transition-transform origin-center duration-200 text-sm"
+      :class="showExhibited ? 'rotate-90 translate-y-1' : ''"
     >
-      ▶
+      <svg class="max-w-[30px] mt-1 min-h-[30px] svg-inline--fa fa-caret-right accordion-icon-ltr me-2" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="caret-right" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 512" data-fa-i2svg=""><path fill="currentColor" d="M246.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-128-128c-9.2-9.2-22.9-11.9-34.9-6.9s-19.8 16.6-19.8 29.6l0 256c0 12.9 7.8 24.6 19.8 29.6s25.7 2.2 34.9-6.9l128-128z"></path></svg>
     </span>
+    <!-- ▶ -->
     <span>Exhibited Artists</span>
   </div>
 
@@ -285,7 +286,7 @@ useSeoMeta({ title: 'Artists' })
           <li
             v-for="doc in exhibitedSearchItems"
             :key="doc.slug"
-            class="h-8"
+            class="h-max min-h-4 leading-relaxed -mb-1 pt-1"
           >
             <NuxtLink
               class="en-letter"
@@ -328,7 +329,7 @@ useSeoMeta({ title: 'Artists' })
           <li
             v-for="doc in group.items"
             :key="doc.slug"
-            class="h-8"
+            class="h-max min-h-4 leading-relaxed -mb-1 pt-1"
           >
             <NuxtLink
               class="en-letter"
@@ -356,7 +357,7 @@ useSeoMeta({ title: 'Artists' })
 
 
           <!-- empty / status messages -->
-          <p
+          <!-- <p
             v-if="!pending && !items.length"
             class="mt-4 text-gray-500"
           >
@@ -374,7 +375,7 @@ useSeoMeta({ title: 'Artists' })
             class="fixed bottom-6 left-1/2 -translate-x-1/2 py-1 px-3 text-sm text-red-900 bg-red-300/80 rounded shadow"
           >
             Error loading. Showing cache.
-          </div>
+          </div> -->
         </div>
 
 <!-- RIGHT COLUMN: single preview on hover (desktop only) -->
@@ -434,7 +435,7 @@ useSeoMeta({ title: 'Artists' })
 }
 
 .en-letter {
-  --at-apply: tracking-wide no-underline uppercase text-[#595a5c]/90 hover:text-amber-500 transition-colors;
+  --at-apply: tracking-wide no-underline uppercase text-[#595a5c]/88 hover:text-amber-500 transition-colors;
   font-weight: 100;
   font-size: 1rem;
   text-transform: uppercase;

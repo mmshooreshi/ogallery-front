@@ -190,7 +190,7 @@ useSeoMeta({ title: 'Exhibitions' })
     </section>
 
     <!-- status -->
-    <div
+    <!-- <div
       v-if="pending"
       class="fixed z-20 bottom-6 left-1/2 -translate-x-1/2 py-1 px-3 text-sm text-gray-900 bg-yellow-300/80 rounded shadow"
     >
@@ -201,7 +201,7 @@ useSeoMeta({ title: 'Exhibitions' })
       class="fixed z-20 bottom-6 left-1/2 -translate-x-1/2 py-1 px-3 text-sm text-red-900 bg-red-300/80 rounded shadow"
     >
       Error loading. Showing cache.
-    </div>
+    </div> -->
   </main>
 </template>
 

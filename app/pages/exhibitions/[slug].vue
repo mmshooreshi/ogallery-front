@@ -272,7 +272,7 @@ const dateRange = computed(() => {
       </footer>
     </div>
 
-    <div
+    <!-- <div
       v-if="pending"
       class="fixed z-20 bottom-6 py-0 text-black/70 bg-yellow-500/60 px-2"
     >
@@ -284,7 +284,7 @@ const dateRange = computed(() => {
       class="fixed z-20 bottom-6 py-0 text-red-800/80 bg-red-500/60 px-2"
     >
       {{ t('exhibitions.detail.error') }}
-    </div>
+    </div> -->
     </div>
   </div>
 </template>

@@ -176,8 +176,8 @@ const selectedWorks = computed(() => {
         <!-- <NuxtLink to="/artists" class="text-sm underline hover:text-yellow-500 transition no-underline">← {{ t('artists.detail.backToList') }}</NuxtLink> -->
       </footer>
     </div>
-          <div v-if="pending" class="fixed z-20 bottom-6 py-0 text-black/70 bg-yellow-500/60 px-2 ">{{ t('artists.detail.loading') }}</div>
-      <div v-else-if="error" class="fixed z-20 bottom-6 py-0 text-red-800/80 bg-red-500/60 px-2 ">{{ t('artists.detail.error') }}</div>
+          <!-- <div v-if="pending" class="fixed z-20 bottom-6 py-0 text-black/70 bg-yellow-500/60 px-2 ">{{ t('artists.detail.loading') }}</div>
+      <div v-else-if="error" class="fixed z-20 bottom-6 py-0 text-red-800/80 bg-red-500/60 px-2 ">{{ t('artists.detail.error') }}</div> -->
 
   </section>
 </template>
