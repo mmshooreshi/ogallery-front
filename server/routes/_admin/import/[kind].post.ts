@@ -12,12 +12,25 @@ type ImportPayload = {
 };
 
 const ROUTE_KIND_MAP: Record<string, string> = {
-  artists: "ARTIST",
-  artist: "ARTIST",
-  exhibitions: "EXHIBITION",
-  exhibition: "EXHIBITION",
-  news: "NEWS",
-  newsitem: "NEWS",
+  // Artists
+  "artists": "ARTIST",
+  "artist": "ARTIST",
+  // Exhibitions
+  "exhibitions": "EXHIBITION",
+  "exhibition": "EXHIBITION",
+  // News
+  "news": "NEWS",
+  "newsitem": "NEWS",
+  // Viewing Rooms
+  "viewing-rooms": "VIEWING_ROOM",
+  "viewing-room": "VIEWING_ROOM",
+  // Window
+  "window": "WINDOW",
+  // Studio
+  "studio": "STUDIO",
+  // Publications
+  "publications": "PUBLICATION",
+  "publication": "PUBLICATION"
 };
 
 function normalizeKind(input: unknown): string {
@@ -26,7 +39,7 @@ function normalizeKind(input: unknown): string {
   const lower = raw.toLowerCase();
   const mapped = ROUTE_KIND_MAP[lower];
   if (mapped) return mapped;
-
+  // Fallback to uppercased raw string if it looks like a valid key
   const upper = raw.toUpperCase();
   if (!/^[A-Z0-9_]+$/.test(upper)) return "";
   return upper;
@@ -52,49 +65,36 @@ function uniq(strings: (string | null | undefined)[]): string[] {
 export default defineEventHandler(async (event) => {
   const paramKind = getRouterParam(event, "kind");
   const body = await readBody<ImportPayload>(event);
-  const tagIds = body.tagIds ?? [];
-  const selectedTags = tagIds.length
-    ? await prisma.tag.findMany({
-        where: { id: { in: tagIds } },
-        select: { id: true, locale: true },
-      })
-    : [];
-
+  
   if (!body?.data?.slug) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: "Missing payload data.slug",
-    });
+    throw createError({ statusCode: 400, statusMessage: "Missing payload data.slug" });
   }
 
   const scraped = body.data;
 
+  // 1. Determine Kind
   const finalKind =
     normalizeKind(paramKind) ||
     normalizeKind(body.kind) ||
     normalizeKind(scraped.kind);
 
   if (!finalKind) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: `Invalid kind: "${paramKind || body.kind || scraped.kind}"`,
-    });
+    throw createError({ statusCode: 400, statusMessage: `Invalid kind: "${paramKind || body.kind || scraped.kind}"` });
   }
 
+  // 2. Prepare Data
   const status = body.status ?? Status.PUBLISHED;
   const locales = Array.isArray(scraped.locales) ? scraped.locales : [];
   const enLoc = locales.find((l: any) => l.locale === "EN") ?? locales[0];
 
-  // ----------------------------
-  // 0) Prepare Media (NO TX)
-  // ----------------------------
-  const cvUrl = enLoc?.cvUrl ?? null;
+  // 3. Extract URLs (Media Preparation)
+  // Fallback: If cvUrl is missing in locale, check props (common in Publications)
+  const cvUrl = enLoc?.cvUrl ?? (scraped.props as any)?.pdfUrl ?? null;
   const portfolioUrl = enLoc?.portfolioUrl ?? null;
+  const featuredImageUrl = (scraped.props as any)?.featuredImage?.url ?? null;
 
   const workUrls = (scraped.works ?? []).map((w) => w?.full);
   const installationUrls = (scraped.installations ?? []).map((i) => i?.full);
-
-  const featuredImageUrl = (scraped.props as any)?.featuredImage?.url ?? null;
 
   const allMediaUrls = uniq([
     featuredImageUrl,
@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
     ...installationUrls,
   ]);
 
-  // Existing
+  // 4. Create Missing Media (Bulk)
   const existingMedia = allMediaUrls.length
     ? await prisma.media.findMany({
         where: { url: { in: allMediaUrls } },
@@ -113,38 +113,27 @@ export default defineEventHandler(async (event) => {
     : [];
   const existingByUrl = new Map(existingMedia.map((m) => [m.url, m.id]));
 
-  // Create missing in bulk
   const missingUrls = allMediaUrls.filter((u) => !existingByUrl.has(u));
   if (missingUrls.length) {
     await prisma.media.createMany({
       data: missingUrls.map((url) => ({
         url,
-        kind:
-          url === featuredImageUrl
-            ? "IMAGE"
-            : url === cvUrl || url === portfolioUrl
-              ? "DOCUMENT"
-              : "IMAGE",
-
+        kind: url === featuredImageUrl ? "IMAGE" : 
+              (url === cvUrl || url === portfolioUrl) ? "DOCUMENT" : "IMAGE",
         meta: {
           source: "ogallery",
-          role:
-            url === cvUrl
-              ? "CV"
-              : url === portfolioUrl
-                ? "PORTFOLIO"
-                : installationUrls.includes(url)
-                  ? "INSTALLATION"
-                  : workUrls.includes(url)
-                    ? "SELECTED_WORK"
-                    : "UNKNOWN",
+          role: url === cvUrl ? "CV" : 
+                url === portfolioUrl ? "PORTFOLIO" : 
+                installationUrls.includes(url) ? "INSTALLATION" : 
+                workUrls.includes(url) ? "SELECTED_WORK" : 
+                (url === featuredImageUrl ? "FEATURED" : "UNKNOWN"),
         },
       })),
       skipDuplicates: true,
     });
   }
 
-  // Re-read IDs (complete mapping)
+  // Reload IDs to get the newly created ones
   const mediaRows = allMediaUrls.length
     ? await prisma.media.findMany({
         where: { url: { in: allMediaUrls } },
@@ -153,18 +142,14 @@ export default defineEventHandler(async (event) => {
     : [];
   const mediaIdByUrl = new Map(mediaRows.map((m) => [m.url, m.id]));
 
-  // IMPORTANT: do NOT do N Media.update calls here if you have many works.
-  // Put captions/thumbs into EntryMedia.meta; keep Media.caption optional.
-
-  // ----------------------------
-  // 1) Upsert Entry (NO TX)
-  // ----------------------------
+  // 5. Upsert Entry (No Transaction yet to get ID)
   const entry = await prisma.entry.upsert({
     where: { kind_slug: { kind: finalKind, slug: scraped.slug } },
     update: { status },
     create: { kind: finalKind, slug: scraped.slug, status },
   });
 
+  // 6. Handle Tags
   if (body.tagIds?.length) {
     await prisma.entryTag.createMany({
       data: body.tagIds.map((tagId) => ({
@@ -175,7 +160,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // Read current props/dates once (NO TX) to merge safely
+  // 7. Prepare Props & Dates
   const current = await prisma.entry.findUnique({
     where: { id: entry.id },
     select: { props: true, dates: true },
@@ -183,44 +168,47 @@ export default defineEventHandler(async (event) => {
 
   const startDate = safeIso((scraped as any)?.props?.startDate);
   const endDate = safeIso((scraped as any)?.props?.endDate);
-  const publishDateIso = safeIso(scraped.props?.publishDate)
+  // For publications/news, often just a single date
+  const publishDateIso = safeIso(scraped.props?.publishDate);
 
   const mergedProps = {
     ...((current?.props as any) ?? {}),
-    // keep stable top-level props
     sourceUrlEn: scraped.sourceUrlEn,
     sourceUrlFa: scraped.sourceUrlFa,
-    // keep everything scraped in a namespaced object to avoid collisions
+    status: scraped.props?.status,
+    // Store raw scraped data for reference
     scraped: {
       kind: scraped.kind,
       props: scraped.props ?? {},
       importedAt: new Date().toISOString(),
     },
   };
-const mergedDates =
-  publishDateIso || startDate || endDate
-    ? {
-        ...(current?.dates as any ?? {}),
-        range: {
-          start: publishDateIso ?? startDate ?? null,
-          end: endDate ?? publishDateIso ?? null,
-          raw:
-            scraped.props?.publishDate ??
-            scraped.props?.dateString ??
-            null,
-          precision: 'day',
-          timezone: 'UTC',
-        },
-      }
-    : (current?.dates as any ?? null)
 
-    // ----------------------------
-  // 2) Build all dependent writes, then batch $transaction([...])
-  //    (NOT interactive, Accelerate-safe)
-  // ----------------------------
+  
+  // Determine Date Range
+  // If startDate exists, use it. If not, use publishDate as both start and end (Point in time).
+  const finalStart = startDate ?? publishDateIso ?? null;
+  const finalEnd = endDate ?? publishDateIso ?? null;
+
+  const mergedDates =
+    finalStart || finalEnd
+      ? {
+          ...(current?.dates as any ?? {}),
+          range: {
+            start: finalStart,
+            end: finalEnd,
+            raw: scraped.props?.publishDate ?? scraped.props?.dateString ?? null,
+            precision: 'day',
+            timezone: 'UTC',
+          },
+        }
+      : (current?.dates as any ?? null);
+
+
+  // 8. Build Transaction Operations
   const ops: any[] = [];
 
-  // Entry update (props/dates)
+  // A) Update Entry Props/Dates
   ops.push(
     prisma.entry.update({
       where: { id: entry.id },
@@ -228,9 +216,8 @@ const mergedDates =
     })
   );
 
-  // EntryMedia rebuild
+  // B) Rebuild EntryMedia
   const managedRoles = ["CV", "PORTFOLIO", "SELECTED_WORK", "INSTALLATION"];
-
   const entryMediaToCreate: {
     entryId: number;
     mediaId: number;
@@ -241,28 +228,19 @@ const mergedDates =
 
   let ord = 0;
 
+  // CV / PDF
   if (cvUrl) {
     const id = mediaIdByUrl.get(cvUrl);
-    if (id)
-      entryMediaToCreate.push({
-        entryId: entry.id,
-        mediaId: id,
-        role: "CV",
-        ord: ord++,
-      });
+    if (id) entryMediaToCreate.push({ entryId: entry.id, mediaId: id, role: "CV", ord: ord++ });
   }
 
+  // Portfolio
   if (portfolioUrl) {
     const id = mediaIdByUrl.get(portfolioUrl);
-    if (id)
-      entryMediaToCreate.push({
-        entryId: entry.id,
-        mediaId: id,
-        role: "PORTFOLIO",
-        ord: ord++,
-      });
+    if (id) entryMediaToCreate.push({ entryId: entry.id, mediaId: id, role: "PORTFOLIO", ord: ord++ });
   }
 
+  // Works
   for (const w of scraped.works ?? []) {
     if (!w?.full) continue;
     const id = mediaIdByUrl.get(w.full);
@@ -280,6 +258,7 @@ const mergedDates =
     });
   }
 
+  // Installations
   for (const inst of scraped.installations ?? []) {
     if (!inst?.full) continue;
     const id = mediaIdByUrl.get(inst.full);
@@ -292,12 +271,8 @@ const mergedDates =
     });
   }
 
-  ops.push(
-    prisma.entryMedia.deleteMany({
-      where: { entryId: entry.id, role: { in: managedRoles } },
-    })
-  );
-
+  // Delete old managed media & insert new
+  ops.push(prisma.entryMedia.deleteMany({ where: { entryId: entry.id, role: { in: managedRoles } } }));
   if (entryMediaToCreate.length) {
     ops.push(
       prisma.entryMedia.createMany({
@@ -313,35 +288,38 @@ const mergedDates =
     );
   }
 
-  // coverMediaId (choose first work else first installation)
-  const featuredMediaId = featuredImageUrl
-    ? mediaIdByUrl.get(featuredImageUrl)
-    : null
+// C) Update Cover Media (SMART FALLBACKS)
+  
+  // 1. Try Featured Image from Props (Best)
+  const featuredMediaId = featuredImageUrl ? mediaIdByUrl.get(featuredImageUrl) : null;
+  
+  // 2. Try First Work (Fallback)
+  const firstWorkId = entryMediaToCreate.find(em => em.role === 'SELECTED_WORK')?.mediaId;
+  
+  // 3. Try First Installation (Last Resort)
+  const firstInstallId = entryMediaToCreate.find(em => em.role === 'INSTALLATION')?.mediaId;
 
-  const cover =
-    featuredMediaId
-      ? { mediaId: featuredMediaId }
-      : entryMediaToCreate.find(em => em.role === 'SELECTED_WORK')
-        ?? entryMediaToCreate.find(em => em.role === 'INSTALLATION')
+  // Pick the winner
+  const coverId = featuredMediaId ?? firstWorkId ?? firstInstallId;
 
-  if (cover?.mediaId) {
+  if (coverId) {
     ops.push(
       prisma.entry.update({
         where: { id: entry.id },
-        data: { coverMediaId: cover.mediaId },
-      }),
-    )
+        data: { coverMediaId: coverId },
+      })
+    );
   }
 
-
-  // Locales: store ALL locale fields
+  // D) Update Locales
   for (const loc of locales) {
     const locale = normalizeLocale(loc?.locale);
     if (!locale) continue;
 
+    // Build the data object for the locale
     const localeData = {
       sourceUrl: locale === "EN" ? scraped.sourceUrlEn : scraped.sourceUrlFa,
-      cvUrl: loc.cvUrl ?? null,
+      cvUrl: loc.cvUrl ?? (locale === "EN" ? cvUrl : null), // Fallback to main CV if missing in EN locale
       portfolioUrl: loc.portfolioUrl ?? null,
       bodyText: (loc as any).bodyText ?? null,
       sections: (loc as any).sections ?? null,
@@ -368,14 +346,11 @@ const mergedDates =
     );
   }
 
-  // Optional: Link EXHIBITION -> ARTIST if artist exists
+  // E) Optional: Link Linking (e.g. Exhibition -> Artist)
   if (finalKind === "EXHIBITION" && scraped.props?.artistSlug) {
-    ops.push(
-      prisma.link.deleteMany({ where: { fromId: entry.id, role: "ARTIST" } })
-    );
-
-    // This findUnique cannot be inside the array transaction, because we need its result.
-    // Do it before pushing a create op.
+    ops.push(prisma.link.deleteMany({ where: { fromId: entry.id, role: "ARTIST" } }));
+    
+    // Find artist ID (must be done outside transaction to use result)
     const artist = await prisma.entry.findUnique({
       where: { kind_slug: { kind: "ARTIST", slug: scraped.props.artistSlug } },
       select: { id: true },
@@ -387,26 +362,10 @@ const mergedDates =
           data: { fromId: entry.id, toId: artist.id, role: "ARTIST", ord: 0 },
         })
       );
-    } else {
-      // keep breadcrumb (optional)
-      ops.push(
-        prisma.entry.update({
-          where: { id: entry.id },
-          data: {
-            props: {
-              ...(mergedProps as any),
-              unresolvedLinks: {
-                ...((mergedProps as any).unresolvedLinks ?? {}),
-                artistSlug: scraped.props.artistSlug,
-              },
-            },
-          },
-        })
-      );
     }
   }
 
-  // Execute atomically (batch transaction, NOT interactive)
+  // 9. Execute Transaction
   await prisma.$transaction(ops);
 
   return { ok: true, entryId: entry.id, kind: finalKind };

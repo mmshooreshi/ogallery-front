@@ -19,10 +19,10 @@ export type ScrapedListItem = {
   sourceUrlFa: string // <-- Renamed to match ScrapedRich and external destination
 }
 
-export type ScrapeKind = 'ARTIST' | 'EXHIBITION' | 'NEWS-ITEM';
+export type ScrapeKind = 'ARTIST' | 'EXHIBITION' | 'NEWS-ITEM' | 'VIEWING-ROOM' | 'WINDOW' | 'STUDIO' | 'PUBLICATION';
 
 export type ScraperConfig = {
-  type: 'ARTIST' | 'EXHIBITION' | 'NEWS-ITEM';
+  type: ScrapeKind;
   baseUrl: string;
   
   paths: {
@@ -32,8 +32,9 @@ export type ScraperConfig = {
   
   selectors: {
     listItems: string;
+    listName?: string; 
     title: string;
-    
+    customProps?: Record<string, string | { selector: string; regex: RegExp }>; // <--- Allow object    
     // --- NEW OPTIONAL SELECTORS ---
     artistLink?: string;  // e.g., 'h2 a[href]'
     dateString?: string;  // e.g., 'h5'
@@ -190,9 +191,24 @@ async fetchList(): Promise<ScrapedListItem[]> {
       
       this.log('info', `[LIST] Selector "${this.config.selectors.listItems}" found ${listElements.length} elements.`);
 
-      listElements.each((_i, el) => {
+listElements.each((_i, el) => {
         const href = ($(el).attr('href') || '').trim();
-        const text = $(el).text().trim();
+        // Default text from the link itself
+        let text = $(el).text().trim();
+
+        // FIX 1: If config has a specific selector for the list name, use it.
+        // (Useful for Studio where the link is an image, and text is in a sibling <p>)
+        if (this.config.selectors.listName) {
+            // We search relative to the current element (el)
+            // If selector starts with '+', we look at siblings
+            if (this.config.selectors.listName.startsWith('+')) {
+                const selector = this.config.selectors.listName.substring(1).trim();
+                text = $(el).nextAll(selector).first().text().trim();
+            } else {
+                text = $(el).find(this.config.selectors.listName).text().trim();
+            }
+        }
+        text = text.replace(/\s+/g, ' ').trim();
         if (!href || !text) return;
 
         let path: string;
@@ -240,6 +256,8 @@ async fetchList(): Promise<ScrapedListItem[]> {
 /**
  * Scrapes non-locale-specific metadata (Artist, Dates) from the EN page.
  */
+// server/lib/ogallery/engine.ts
+
 private async scrapeMetadata(slug: string): Promise<Record<string, any>> {
   const url = this.abs(this.config.paths.detail(slug, 'EN' as Locale));
   if (!url) return {};
@@ -252,27 +270,99 @@ private async scrapeMetadata(slug: string): Promise<Record<string, any>> {
   const imgAttr = this.config.selectors.image?.attr || 'src';
   const imgAltAttr = this.config.selectors.image?.alt || 'alt';
 
+  // NEW: Get the CV/PDF configuration
+  const cvConfig = this.config.selectors.cvLink;
+
   this.log('info', `[META] Fetching metadata from ${url}`);
 
   try {
     const html = await $fetch<string>(url);
     const $ = load(html);
 
-    // Publish date (h5)
+// 1. Custom Props
+    if (this.config.selectors.customProps) {
+      for (const [key, selector] of Object.entries(this.config.selectors.customProps)) {
+        // Handle Object configuration (Selector + Regex)
+        if (typeof selector === 'object' && selector !== null) {
+            const sel = (selector as any).selector;
+            const regex = (selector as any).regex;
+            
+            const raw = $(sel).first().text().trim();
+            if (raw) {
+                if (regex) {
+                    const match = raw.match(regex);
+                    // If regex matches, use the first capturing group (or whole match)
+                    if (match && match[1]) props[key] = match[1].trim();
+                    else if (match) props[key] = match[0].trim();
+                } else {
+                    props[key] = raw;
+                }
+            }
+        } 
+        // Handle simple string selector
+        else if (typeof selector === 'string') {
+            const val = $(selector).first().text().replace(/\s+/g, ' ').trim();
+            if (val) props[key] = val;
+        }
+      }
+    }
+
+    // 2. Publish date (e.g. h5)
     if (publishDateSel) {
-      const publishDate = $(publishDateSel).first().text().trim();
+      // Try multiple matches if the selector has commas
+      const publishDate = $(publishDateSel).filter((_i, el) => $(el).text().trim().length > 0).first().text().trim();
       if (publishDate) props.publishDate = publishDate;
     }
 
-    // Featured image
+    // 3. Featured image
+    // 3. Featured image (UPDATED)
     if (imgSel) {
       const img = $(imgSel).first();
-      const src = this.abs(img.attr(imgAttr) || img.attr('data-src') || null);
-      const alt = (img.attr(imgAltAttr) || '').trim() || null;
+      let src = this.abs(img.attr(imgAttr) || img.attr('data-src') || null);
+      let alt = (img.attr(imgAltAttr) || '').trim() || null;
+
+      // --- FALLBACK: Try Open Graph Meta Tags if selector failed ---
+      if (!src) {
+        const ogImage = $('meta[property="og:image"]').attr('content');
+        if (ogImage) {
+            src = this.abs(ogImage);
+            this.log('info', `[META] Found image via og:image: ${src}`);
+        }
+      }
+      // -----------------------------------------------------------
+
       if (src) props.featuredImage = { url: src, alt };
     }
 
-    // Event date range (h2.h6)
+    // 4. PDF / Download Link (NEW)
+    if (cvConfig) {
+      // a) Try searching inside the specific container (rowSelector)
+      const container = $(cvConfig.rowSelector);
+      let pdfLink = container.find('a[href$=".pdf"]').filter((_i, el) => {
+        const href = ($(el).attr('href') || '').toLowerCase();
+        const text = $(el).text().toLowerCase();
+        
+        // If keywords are defined, at least one must match either href or text
+        if (cvConfig.keywords && cvConfig.keywords.length > 0) {
+           return cvConfig.keywords.some(k => href.includes(k) || text.includes(k));
+        }
+        return true; 
+      }).first();
+
+      // b) Fallback: Search the entire page if specific container failed
+      if (!pdfLink.length) {
+         pdfLink = $('a[href$=".pdf"]').first();
+      }
+
+      const pdfUrl = this.abs(pdfLink.attr('href'));
+      
+      if (pdfUrl) {
+        props.pdfUrl = pdfUrl;
+        this.log('info', `[META] Found PDF URL: ${pdfUrl}`);
+      }
+    }
+
+    // 5. Event date range (e.g. h2 or h6)
     if (dateSelector) {
       const raw = $(dateSelector).first().text().replace(/\s+/g, ' ').trim();
       if (raw) {
@@ -285,18 +375,18 @@ private async scrapeMetadata(slug: string): Promise<Record<string, any>> {
       }
     }
 
-    // Artist links in body (Armory-style)
+    // 6. Artist links in body (Armory-style)
     const artists = this.extractArtistLinksForNews($);
     if (artists.length) {
       props.artists = artists;
     }
 
-    // Zakiehe-style event lines (div blocks after <p>)
+    // 7. Zakiehe-style event lines (div blocks after <p>)
     if (this.config.selectors.metadata?.container) {
       const lines = this.extractEventLinesForNews($, this.config.selectors.metadata.container);
       if (lines.length) props.eventLines = lines;
 
-      // If dateString not found via h2, try to parse from lines as fallback
+      // If dateString wasn't found via the main selector, try to find it in these lines
       if (!props.dateString) {
         const dateLine = lines.find((x) => /\d{4}/.test(x) && /-/.test(x)) || null;
         if (dateLine) {
@@ -389,47 +479,105 @@ private extractArtistLinksForNews($: any): Array<{ slug: string; name: string; h
   return out
 }
 
-// server/lib/ogallery/engine.ts
+// New helper to fetch price/metadata from the list page
+  private async scrapeListMetadata(slug: string): Promise<Record<string, string>> {
+    // Only for Studio (or configured types)
+    if (this.config.type !== 'STUDIO') return {};
 
-  async scrapeDetail(slug: string): Promise<ScrapeResult> {
-    this.logs = []; // Reset logs for this run
-    this.log('info', `Starting rich scrape for ${this.config.type}/${slug}`);
+    const listUrl = `${this.config.baseUrl}${this.config.paths.list}`;
+    try {
+      const html = await $fetch<string>(listUrl);
+      const $ = load(html);
+      const extras: Record<string, string> = {};
 
-    // Call scrapeMetadata along with scrapeLocale and scrapeMedia
-    const [enLocale, faLocaleRaw, media, metadata] = await Promise.all([
-      this.scrapeLocale(slug, 'EN' as Locale),
-      this.scrapeLocale(slug, 'FA' as Locale),
-      this.scrapeMedia(slug), 
-      this.scrapeMetadata(slug), 
-    ]);
+      // Find the card linking to our slug
+      // We look for: a[href*="/studio/slug"]
+      const link = $(`a[href*="/studio/${slug}"]`).first();
+      
+      if (link.length) {
+        // The price is in the sibling <p> tag: <p>Name <br> <span>Price</span></p>
+        // Adjust selector based on the HTML structure you provided:
+        // <p class="text-center ..."> Name <br> <span>25,000,000 T</span> </p>
+        const priceText = link.parent().find('p span').text().trim();
+        
+        if (priceText) {
+            extras.price = priceText;
+            this.log('info', `[LIST-META] Found price: ${priceText}`);
+        }
+      }
+      return extras;
+    } catch (e) {
+      return {};
+    }
+  }
 
-    // Merge: Apply EN data if FA failed to find it
-    const faLocale: ScrapedLocale = {
+
+async scrapeDetail(slug: string): Promise<ScrapeResult> {
+  this.logs = []; 
+  this.log('info', `Starting rich scrape for ${this.config.type}/${slug}`);
+
+  // 1. Run all scrapers in parallel
+  const [enLocale, faLocaleRaw, media, metadata, listExtras] = await Promise.all([
+        this.scrapeLocale(slug, 'EN' as Locale),
+        this.scrapeLocale(slug, 'FA' as Locale),
+        this.scrapeMedia(slug),
+        this.scrapeMetadata(slug),
+        this.scrapeListMetadata(slug) // (This returns { price: "..." })
+      ]);
+
+  // 2. INTELLIGENT MERGE (The Fix)
+  
+  // A) Backfill PDF: If metadata found a PDF but locale didn't, use metadata's.
+  if (metadata.pdfUrl) {
+    if (!enLocale.cvUrl) enLocale.cvUrl = metadata.pdfUrl;
+    if (!faLocaleRaw.cvUrl) faLocaleRaw.cvUrl = metadata.pdfUrl;
+  }
+
+  // B) Backfill Body: If sections exist but bodyHtml is empty, construct it.
+  if (!enLocale.bodyHtml && enLocale.sections?.length) {
+    enLocale.bodyHtml = enLocale.sections.map(s => 
+      s.blocks.map(b => b.html).join('\n')
+    ).join('\n');
+    enLocale.bodyText = enLocale.sections.map(s => 
+      s.blocks.map(b => b.text).join('\n')
+    ).join('\n');
+  }
+
+  if (!faLocaleRaw.bodyHtml && faLocaleRaw.sections?.length) {
+    faLocaleRaw.bodyHtml = faLocaleRaw.sections.map(s => 
+      s.blocks.map(b => b.html).join('\n')
+    ).join('\n');
+    faLocaleRaw.bodyText = faLocaleRaw.sections.map(s => 
+      s.blocks.map(b => b.text).join('\n')
+    ).join('\n');
+  }
+
+  // C) Merge Locales (Apply EN fallback to FA)
+  const faLocale: ScrapedLocale = {
     ...faLocaleRaw,
     bodyHtml: faLocaleRaw.bodyHtml || enLocale.bodyHtml,
-    sections: faLocaleRaw.sections?.length
-        ? faLocaleRaw.sections
-        : enLocale.sections,
+    bodyText: faLocaleRaw.bodyText || enLocale.bodyText, // Ensure text falls back too
+    sections: faLocaleRaw.sections?.length ? faLocaleRaw.sections : enLocale.sections,
     cvUrl: faLocaleRaw.cvUrl || enLocale.cvUrl,
     portfolioUrl: faLocaleRaw.portfolioUrl || enLocale.portfolioUrl,
-    };
+  };
 
-    const sourceUrlEn = this.config.paths.detail(slug, 'EN' as Locale);
-    const sourceUrlFa = this.config.paths.detail(slug, 'FA' as Locale);
+  const sourceUrlEn = this.config.paths.detail(slug, 'EN' as Locale);
+  const sourceUrlFa = this.config.paths.detail(slug, 'FA' as Locale);
+  const finalProps = { ...metadata, ...listExtras };
+  const result: ScrapedRich = {
+    slug,
+    kind: this.config.type,
+    sourceUrlEn: this.abs(sourceUrlEn) || '',
+    sourceUrlFa: this.abs(sourceUrlFa) || '',
+    locales: [enLocale, faLocale],
+    works: media.works,
+    installations: media.installations,
+    props: finalProps,
+  };
 
-    const result: ScrapedRich = {
-      slug,
-      kind: this.config.type,
-      sourceUrlEn: this.abs(sourceUrlEn) || '',
-      sourceUrlFa: this.abs(sourceUrlFa) || '',
-      locales: [enLocale, faLocale],
-      works: media.works,
-      installations: media.installations,
-      props: metadata,
-    };
-
-    return { data: result, logs: this.logs };
-  }
+  return { data: result, logs: this.logs };
+}
 // server/lib/ogallery/engine.ts
 
 private async scrapeLocale(
@@ -754,6 +902,10 @@ private async scrapeMedia(slug: string): Promise<{ works: ScrapedWork[], install
 }
 
 
+// server/lib/ogallery/engine.ts
+
+// ... inside OGalleryScraper class ...
+
   private async scrapeWorksForLocale(
     slug: string,
     locale: Locale,
@@ -763,26 +915,65 @@ private async scrapeMedia(slug: string): Promise<{ works: ScrapedWork[], install
     
     if(!url) return { works: [] };
 
-    try {
+try {
         const html = await $fetch<string>(url);
         const $ = load(html);
         const works: { full: string; thumb: string | null; caption: string | null }[] = [];
         const workSel = this.config.selectors.works;
 
+        const globalTitle = $(this.config.selectors.title).first().text().trim() || null;
+
         if (workSel) {
             $(workSel.container).each((_i, el) => {
-                const fullUrl = this.abs($(el).attr('href') || null);
-                if (!fullUrl) return;
+                // FIX: Cast 'el' to 'Element' so TypeScript knows it has a tagName
+                const element = el as Element; 
 
-                const img = $(el).find('img').first();
-                const thumbUrl = this.abs(img.attr('src') || img.attr('data-src') || null);
-                const caption = $(el).attr(workSel.captionAttr) || null;
+                let fullUrl: string | null = null;
+                let thumbUrl: string | null = null;
+                let caption: string | null = $(element).attr(workSel.captionAttr) || null;
 
-                works.push({
-                    full: fullUrl,
-                    thumb: thumbUrl,
-                    caption,
-                });
+                // Case A: Standard Gallery (<a> wrapper)
+                if (element.tagName === 'a') {
+                    fullUrl = this.abs($(element).attr('href') || null);
+                    const img = $(element).find('img').first();
+                    thumbUrl = this.abs(img.attr('src') || img.attr('data-src') || null);
+                    if (!caption) caption = img.attr('alt') || null;
+                }
+                
+                // Case B: Studio Carousel (Direct <img> tag)
+                else if (element.tagName === 'img') {
+                    fullUrl = this.abs($(element).attr('src') || $(element).attr('data-src') || null);
+                    thumbUrl = fullUrl; 
+                    if (!caption) caption = $(element).attr('alt') || null;
+                }
+
+                // Case C: Studio Carousel Wrapper (<div> containing <img>)
+                else {
+                    const img = $(element).find('img').first();
+                    if (img.length) {
+                        fullUrl = this.abs(img.attr('src') || img.attr('data-src') || null);
+                        thumbUrl = fullUrl;
+                        if (!caption) caption = img.attr('alt') || null;
+                    }
+                }
+
+                // Viewing Room Caption Logic (if needed)
+                if (!caption) {
+                    caption = $(element).find('.caption').text().trim() || null;
+                }
+
+                // Fallback to Global Title
+                if (!caption && globalTitle) {
+                    caption = globalTitle; 
+                }
+
+                if (fullUrl) {
+                    works.push({
+                        full: fullUrl,
+                        thumb: thumbUrl,
+                        caption,
+                    });
+                }
             });
         }
         return { works };

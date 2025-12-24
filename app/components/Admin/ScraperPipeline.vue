@@ -5,7 +5,7 @@ import { ref, onMounted, computed } from 'vue'
 import type { Status, Locale } from '~~/server/types/prisma'
 
 // Import ScrapedListItem type
-import type { ScrapedRich, ScrapeLog, ScrapeKind, ScrapedListItem } from '~~/server/lib/ogallery/engine' 
+import type { ScrapedRich, ScrapeLog, ScrapeKind, ScrapedListItem } from '~~/server/lib/ogallery/engine'
 const fixingDates = ref(false)
 type TagItem = {
   id: number
@@ -44,7 +44,7 @@ const listPath = ref('')
 // Define props to make the component configurable
 const props = defineProps<{
   kind: ScrapeKind // 'ARTIST' or 'EXHIBITION' (Prisma Kind)
-  apiPath: 'artists' | 'exhibitions' | 'news' // URL segment for API and Admin UI
+  apiPath: 'artists' | 'exhibitions' | 'news' | 'publications' | 'viewing-rooms' | 'studio' | 'window' // URL segment for API and Admin UI
   title: string
 }>()
 // --- Types ---
@@ -86,7 +86,7 @@ function openInfoModal(row: Row) {
 
 
 
-async function loadList () {
+async function loadList() {
   loadingList.value = true
   loadError.value = null
   rows.value = []
@@ -125,13 +125,13 @@ async function loadList () {
 }
 
 
-async function loadDetails (row: Row) {
+async function loadDetails(row: Row) {
   row.loadingDetails = true
   row.error = null
   row.logs = undefined // Clear old logs
   try {
     const res = await $fetch<{ data: ScrapedRich, logs: ScrapeLog[] }>(
-      `${baseUrl.value}/${row.slug}`,{method: 'POST'}
+      `${baseUrl.value}/${row.slug}`, { method: 'POST' }
     )
     row.details = res.data
     row.logs = res.logs // Capture logs for info modal
@@ -157,7 +157,7 @@ async function loadConfig() {
 }
 
 
-async function importRow (row: Row) {
+async function importRow(row: Row) {
   if (!row.details) {
     row.error = 'Load details first'
     return
@@ -208,75 +208,62 @@ onMounted(() => {
 </script>
 
 <template>
+
   <section class="p-6 space-y-4">
+
+
+        <nav class="navbar">
+        <ul class="nav-items">
+          <li class="nav-item"><NuxtLink to="/admin/ogallery-exhibitions">Exhibitions</NuxtLink></li>
+          <li class="nav-item"><NuxtLink to="/admin/ogallery-artists">Artists</NuxtLink></li>
+          <li class="nav-item"><NuxtLink to="/admin/ogallery-news">News</NuxtLink></li>
+          <li class="nav-item"><NuxtLink to="/admin/ogallery-viewing-rooms">Viewing Rooms</NuxtLink></li>
+          <li class="nav-item"><NuxtLink to="/admin/ogallery-window">Window</NuxtLink></li>
+          <li class="nav-item"><NuxtLink to="/admin/ogallery-studio">Studio</NuxtLink></li>
+          <li class="nav-item"><NuxtLink to="/admin/ogallery-publications">Publications</NuxtLink></li>          
+        </ul>
+    </nav>    
     <header class="flex items-center gap-4">
       <h1 class="text-2xl font-semibold">Import OGallery {{ props.title }}</h1>
-      
-        <div>
-    <label class="block text-xs font-medium mb-1">
-      List Path
-    </label>
-    <input
-      v-model="listPath"
-      class="border px-2 py-1 text-xs w-72"
-      :placeholder="`/en/${props.apiPath}/2022`"
-    >
-  </div>
-  
-  <div>
-  <label class="block text-xs font-medium mb-1">
-    Apply Tag(s)
-  </label>
-  <select
-    v-model="selectedTagIds"
-    multiple
-    class="border px-2 py-1 text-xs w-64 h-24"
-  >
-    <option
-      v-for="tag in tags"
-      :key="tag.id"
-      :value="tag.id"
-    >
-      {{ tag.name }} <span v-if="tag.locale">({{ tag.locale }})</span>
-    </option>
-  </select>
-</div>
 
-      <button
-        type="button"
-        class="px-3 py-2 text-sm border rounded bg-black text-white"
-        :disabled="loadingList"
-        @click="loadList"
-      >
+      <div>
+        <label class="block text-xs font-medium mb-1">
+          List Path
+        </label>
+        <input v-model="listPath" class="border px-2 py-1 text-xs w-72" :placeholder="`/en/${props.apiPath}/2022`">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium mb-1">
+          Apply Tag(s)
+        </label>
+        <select v-model="selectedTagIds" multiple class="border px-2 py-1 text-xs w-64 h-24">
+          <option v-for="tag in tags" :key="tag.id" :value="tag.id">
+            {{ tag.name }} <span v-if="tag.locale">({{ tag.locale }})</span>
+          </option>
+        </select>
+      </div>
+
+      <button type="button" class="px-3 py-2 text-sm border rounded bg-black text-white" :disabled="loadingList"
+        @click="loadList">
         {{ loadingList ? 'Refreshing…' : 'Reload list' }}
       </button>
 
-      <button
-        type="button"
-        class="px-3 py-2 text-sm border rounded bg-blue-600 text-white"
-        :disabled="rows.length === 0 || loadingList"
-        @click="loadAllDetails"
-      >
-        Load all details ({{ rows.filter(r => r.details).length }}/{{ rows.length }})
+      <button type="button" class="px-3 py-2 text-sm border rounded bg-blue-600 text-white"
+        :disabled="rows.length === 0 || loadingList" @click="loadAllDetails">
+        Load all details ({{rows.filter(r => r.details).length}}/{{ rows.length }})
       </button>
 
-      <button
-        type="button"
-        class="px-3 py-2 text-sm border rounded bg-green-600 text-white"
+      <button type="button" class="px-3 py-2 text-sm border rounded bg-green-600 text-white"
         :disabled="rows.length === 0 || loadingList || rows.filter(r => r.details && !r.imported).length === 0"
-        @click="importAllLoaded"
-      >
+        @click="importAllLoaded">
         Import all loaded
       </button>
 
-      <button
-  type="button"
-  class="px-3 py-2 text-sm border rounded bg-amber-500 text-white"
-  :disabled="fixingDates"
-  @click="fixDates"
->
-  {{ fixingDates ? 'Fixing…' : 'Fix dates' }}
-</button>
+      <button type="button" class="px-3 py-2 text-sm border rounded bg-amber-500 text-white" :disabled="fixingDates"
+        @click="fixDates">
+        {{ fixingDates ? 'Fixing…' : 'Fix dates' }}
+      </button>
 
       <p v-if="loadError" class="text-sm text-red-600">{{ loadError }}</p>
     </header>
@@ -296,12 +283,8 @@ onMounted(() => {
         </tr>
       </thead>
       <tbody>
-       <tr
-          v-for="row in rows"
-          :key="row.slug"
-          class="border-b align-top"
-          :class="row.imported ? 'bg-green-50' : row.error ? 'bg-red-50' : ''"
-        >
+        <tr v-for="row in rows" :key="row.slug" class="border-b align-top"
+          :class="row.imported ? 'bg-green-50' : row.error ? 'bg-red-50' : ''">
           <td class="py-2 pr-2 align-top">
             <input v-model="row.slug" class="border px-2 py-1 text-xs w-40" readonly>
           </td>
@@ -309,7 +292,7 @@ onMounted(() => {
           <td class="py-2 pr-2 align-top">
             <input v-model="row.nameEn" class="border px-2 py-1 text-xs w-full" readonly>
             <div class="text-[10px] text-black/60 mt-1">
-              <a :href="row.sourceUrlEn" target="_blank" class="underline">EN page</a> 
+              <a :href="row.sourceUrlEn" target="_blank" class="underline">EN page</a>
               <span class="mx-1">·</span>
               <a :href="row.sourceUrlFa" target="_blank" class="underline">FA page</a>
             </div>
@@ -328,22 +311,21 @@ onMounted(() => {
             <div v-else-if="row.details">
               <div>
                 <strong>Works:</strong> {{ row.details.works.length }}
-                <span v-if="row.details.installations.length"> | <strong>Installs:</strong> {{ row.details.installations.length }}</span>
+                <span v-if="row.details.installations.length"> | <strong>Installs:</strong> {{
+                  row.details.installations.length }}</span>
               </div>
               <div>
                 <strong :class="row.details.locales.some(l => l.bodyHtml) ? 'text-green-700' : 'text-red-700'">
                   Bio/Press:
-                </strong> 
-                {{ row.details.locales.some(l => l.bodyHtml) ? 'Found' : 'Missing' }}
+                </strong>
+                {{row.details.locales.some(l => l.bodyHtml) ? 'Found' : 'Missing'}}
               </div>
               <div v-if="row.details.locales.find(l => l.locale === 'EN')?.cvUrl">
-                <strong>CV:</strong> <a :href="row.details.locales.find(l => l.locale === 'EN')?.cvUrl || '#'" target="_blank" class="underline">Open</a>
+                <strong>CV:</strong> <a :href="row.details.locales.find(l => l.locale === 'EN')?.cvUrl || '#'"
+                  target="_blank" class="underline">Open</a>
               </div>
-              <button
-                type="button"
-                class="mt-1 px-2 py-0.5 border rounded text-[10px] bg-gray-100"
-                @click="openInfoModal(row)"
-              >
+              <button type="button" class="mt-1 px-2 py-0.5 border rounded text-[10px] bg-gray-100"
+                @click="openInfoModal(row)">
                 Show Scrape Logs
               </button>
             </div>
@@ -351,22 +333,14 @@ onMounted(() => {
           </td>
 
           <td class="py-2 pr-2 align-top text-xs space-y-1">
-            <button
-              type="button"
-              class="px-3 py-1 border rounded text-xs"
-              :disabled="row.loadingDetails"
-              @click="loadDetails(row)"
-            >
+            <button type="button" class="px-3 py-1 border rounded text-xs" :disabled="row.loadingDetails"
+              @click="loadDetails(row)">
               {{ row.loadingDetails ? 'Loading…' : 'Load details' }}
             </button>
             <br>
-            <button
-              type="button"
-              class="px-3 py-1 border rounded text-xs"
+            <button type="button" class="px-3 py-1 border rounded text-xs"
               :class="{ 'bg-green-500 text-white': row.details && !row.imported && !row.importing }"
-              :disabled="row.importing || !row.details"
-              @click="importRow(row)"
-            >
+              :disabled="row.importing || !row.details" @click="importRow(row)">
               <span v-if="row.importing">Importing…</span>
               <span v-else-if="row.imported">Imported</span>
               <span v-else>Import</span>
@@ -384,24 +358,17 @@ onMounted(() => {
     </p>
   </section>
 
-  <div
-    v-if="modalOpen"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-    @click.self="modalOpen = false"
-  >
+  <div v-if="modalOpen" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+    @click.self="modalOpen = false">
     <div class="bg-white p-6 rounded-lg shadow-xl w-11/12 max-w-2xl max-h-[80vh] overflow-y-auto">
       <h3 class="text-lg font-bold mb-4">Scraping Diagnostics: {{ modalSlug }} ({{ props.kind }})</h3>
       <div v-if="modalLogs.length">
-        <div 
-          v-for="(log, index) in modalLogs" 
-          :key="index" 
-          :class="[
-            'p-1 text-xs border-l-4 my-1',
-            log.level === 'info' ? 'border-blue-500 bg-blue-50' :
+        <div v-for="(log, index) in modalLogs" :key="index" :class="[
+          'p-1 text-xs border-l-4 my-1',
+          log.level === 'info' ? 'border-blue-500 bg-blue-50' :
             log.level === 'warn' ? 'border-yellow-500 bg-yellow-50' :
-            'border-red-500 bg-red-50'
-          ]"
-        >
+              'border-red-500 bg-red-50'
+        ]">
           <span class="font-mono uppercase mr-2">{{ log.level }}</span>
           {{ log.message }}
         </div>
@@ -409,12 +376,51 @@ onMounted(() => {
       <div v-else class="text-gray-500">
         No logs captured for this scrape run.
       </div>
-      <button 
-        class="mt-4 px-4 py-2 bg-gray-200 rounded text-sm" 
-        @click="modalOpen = false"
-      >
+      <button class="mt-4 px-4 py-2 bg-gray-200 rounded text-sm" @click="modalOpen = false">
         Close
       </button>
     </div>
   </div>
 </template>
+
+<style scoped>
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #33333352;
+            color: #fff;
+            padding: 10px 20px;
+        }
+        .navbar-brand {
+            font-size: 24px;
+            color: #fff;
+            text-decoration: none;
+        }
+        .nav-items {
+            list-style: none;
+            display: flex;
+            margin: 0;
+            padding: 0;
+        }
+        .nav-item {
+            margin-left: 20px;
+        }
+        .nav-link {
+            text-decoration: none;
+            color: #fff;
+            transition: color 0.3s ease;
+        }
+        .nav-link:hover {
+            color: #ff6600;
+        }
+        @media (max-width: 768px) {
+            .nav-items {
+                flex-direction: column;
+                align-items: center;
+            }
+            .nav-item {
+                margin: 10px 0;
+            }
+        }
+</style>

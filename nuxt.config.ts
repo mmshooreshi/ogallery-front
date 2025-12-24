@@ -12,8 +12,8 @@ export default defineNuxtConfig({
 
   modules: [   'motion-v/nuxt', 
 ,  '@nuxt/image', // Nuxt 4-compatible
-  '@vueuse/nuxt', '@pinia/nuxt', '@nuxtjs/sitemap', '@nuxtjs/robots', '@nuxtjs/seo', '@unocss/nuxt', '@nuxtjs/i18n'],
-  
+  '@vueuse/nuxt', '@pinia/nuxt', '@nuxtjs/sitemap', '@nuxtjs/robots', '@nuxtjs/seo', '@unocss/nuxt', '@nuxtjs/i18n', '@nuxt/icon'],
+
   css: [
     '@/assets/css/fonts.css',
     '@/assets/css/layouts.css',

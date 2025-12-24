@@ -111,6 +111,19 @@ async function importAllLoaded() {
 
 <template>
   <section class="p-6 space-y-4">
+
+
+        <nav class="navbar">
+        <ul class="nav-items">
+          <li class="nav-item"><NuxtLink to="/admin/ogallery-exhibitions">Exhibitions</NuxtLink></li>
+          <li class="nav-item"><NuxtLink to="/admin/ogallery-artists">Artists</NuxtLink></li>
+          <li class="nav-item"><NuxtLink to="/admin/ogallery-news">News</NuxtLink></li>
+          <li class="nav-item"><NuxtLink to="/admin/ogallery-viewing-rooms">Viewing Rooms</NuxtLink></li>
+          <li class="nav-item"><NuxtLink to="/admin/ogallery-window">Window</NuxtLink></li>
+          <li class="nav-item"><NuxtLink to="/admin/ogallery-studio">Studio</NuxtLink></li>
+          <li class="nav-item"><NuxtLink to="/admin/ogallery-publications">Publications</NuxtLink></li>          
+        </ul>
+    </nav>
    <header class="flex items-center gap-4">
   <h1 class="text-2xl font-semibold">Import OGallery artists</h1>
   
@@ -258,3 +271,47 @@ async function importAllLoaded() {
     </p>
   </section>
 </template>
+
+
+
+<style scoped>
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #33333352;
+            color: #fff;
+            padding: 10px 20px;
+        }
+        .navbar-brand {
+            font-size: 24px;
+            color: #fff;
+            text-decoration: none;
+        }
+        .nav-items {
+            list-style: none;
+            display: flex;
+            margin: 0;
+            padding: 0;
+        }
+        .nav-item {
+            margin-left: 20px;
+        }
+        .nav-link {
+            text-decoration: none;
+            color: #fff;
+            transition: color 0.3s ease;
+        }
+        .nav-link:hover {
+            color: #ff6600;
+        }
+        @media (max-width: 768px) {
+            .nav-items {
+                flex-direction: column;
+                align-items: center;
+            }
+            .nav-item {
+                margin: 10px 0;
+            }
+        }
+</style>

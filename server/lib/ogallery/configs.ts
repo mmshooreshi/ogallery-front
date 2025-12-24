@@ -182,8 +182,212 @@ export const NewsItemConfig: ScraperConfig = {
   },
 }
 
+
+// --- 1. VIEWING ROOMS CONFIG ---
+// server/lib/ogallery/configs.ts
+
+// --- 1. VIEWING ROOMS CONFIG ---
+export const ViewingRoomsConfig: ScraperConfig = {
+  type: 'VIEWING-ROOM',
+  baseUrl: 'https://ogallery.net',
+  paths: {
+    list: '/en/viewing-rooms',
+    detail: (slug, locale) => `/${locale.toLowerCase()}/viewing-rooms/${slug}`,
+  },
+  selectors: {
+    // List Page
+    listItems: '.exhibition-card a.exhibition-card-thumb',
+    
+    // Detail Page
+    title: '.container h2', // "Omid Moshksar"
+    dateString: '.container h5:nth-of-type(2)', // "November 12 - 29 2021"
+    
+    customProps: {
+      artistName: '.container h3 a', // Link to artist profile
+    },
+
+    // Hero Image
+    image: {
+      selector: '#selected-work img',
+      attr: 'src',
+      alt: 'title'
+    },
+
+    // Body (Often empty or just a statement)
+    body: {
+      preferredId: null,
+      headingTags: ['h5'], // "Online Viewing Room"
+      keywords: { EN: ['.'], FA: ['.'] },
+      contentWrapper: '.container .row.text-center', // The header block
+      paragraphSelector: 'p', // Might not exist, which is fine
+      sectionKey: 'STATEMENT',
+    },
+
+    cvLink: null,
+    portfolioLink: null,
+
+    // Works (The grid of artworks)
+    works: {
+      container: 'figure.artwork-viewingroom',
+      captionAttr: 'data-caption', // We'll extract specific caption elements in engine if needed, but this triggers the loop
+    },
+    
+    installations: null,
+  },
+};
+
+
+// --- 2. WINDOW CONFIG ---
+export const WindowConfig: ScraperConfig = {
+  type: 'WINDOW', // New Distinct Type
+  baseUrl: 'https://ogallery.net',
+  paths: {
+    list: '/en/window',
+    detail: (slug, locale) => `/${locale.toLowerCase()}/window/${slug}`,
+  },
+  selectors: {
+    listItems: 'a[href*="/window/"]',
+    title: 'h1',
+    // Captures "December 26 2025 - January 6 2026"
+    dateString: '.date, h5, h6', 
+    body: {
+      preferredId: null,
+      headingTags: ['h3', 'strong'],
+      keywords: {
+        EN: ['Statement', 'About'],
+        FA: ['بیانیه', 'درباره'],
+      },
+      contentWrapper: '.col-12', 
+      paragraphSelector: 'p',
+      sectionKey: 'ABOUT',
+    },
+    image: { selector: '.featured img' },
+    cvLink: null,
+    portfolioLink: null,
+    works: { container: '.gallery a', captionAttr: 'title' },
+    installations: { selector: '.install-shots img' },
+  },
+};
+
+// --- 3. STUDIO CONFIG ---
+// server/lib/ogallery/configs.ts
+// server/lib/ogallery/configs.ts
+
+export const StudioConfig: ScraperConfig = {
+  type: 'STUDIO',
+  baseUrl: 'https://ogallery.net',
+  paths: {
+    list: '/en/studio',
+    detail: (slug, locale) => `/${locale.toLowerCase()}/studio/${slug}`,
+  },
+  selectors: {
+    // Target the link wrapper
+    listItems: '.exhibition-card a.exhibition-card-thumb',
+    
+    // NEW: Tell fetchList to grab text from the sibling <p> tag
+    // The HTML is: <a>...</a> <p>Name <br> Price</p>
+    listName: '+ p', 
+
+    // Detail Page Title
+    title: '#art-title h5:first-of-type',
+    
+    customProps: {
+      status: '#art-title h5:nth-of-type(2)', // "Available"
+      
+      // NEW: Extract Artist Name from the Title string
+      // String format: "Rasoul Akbarlou, \"The End Of Summer...\""
+      // Regex: Grab everything before the first comma
+      artistName: {
+        selector: '#art-title h5:first-of-type',
+        regex: /^([^,]+)/ 
+      }
+    },
+
+    // Works / Carousel
+    works: {
+      container: '.carousel-item img', 
+      captionAttr: 'alt',
+    },
+
+    image: {
+      selector: '.carousel-item.active img',
+      attr: 'src'
+    },
+
+    body: {
+      preferredId: null,
+      headingTags: ['h1'], 
+      keywords: { EN: ['___'], FA: ['___'] }, 
+      contentWrapper: '.art-info', 
+      paragraphSelector: 'p.non-existent', 
+      sectionKey: 'DESCRIPTION',
+    },
+    
+    cvLink: null,
+    portfolioLink: null,
+    installations: null, 
+  },
+};
+
+
+export const PublicationsConfig: ScraperConfig = {
+  type: 'PUBLICATION',
+  baseUrl: 'https://ogallery.net',
+  paths: {
+    list: '/en/publications',
+    detail: (slug, locale) => `/${locale.toLowerCase()}/publications/${slug}`,
+  },
+  selectors: {
+    listItems: '.row a[href]',
+    title: '.book-title, h1, h2.title, h2',
+    publishDate: '.date, .meta-date, h5, h6', 
+    
+    // NEW: Capture extra details into "props"
+    // This attempts to find list items or paragraphs with these specific labels
+    customProps: {
+      pages: 'li:contains("Pages"), p:contains("Pages")',
+      isbn: 'li:contains("ISBN"), p:contains("ISBN")',
+      publisher: 'li:contains("Publisher"), p:contains("Publisher")',
+      dimensions: 'li:contains("Dimensions"), p:contains("Dimensions"), li:contains("Size")',
+      language: 'li:contains("Language"), p:contains("Language")'
+    },
+
+    image: { 
+      selector: '.col-md-2 img, .col-md-3 img, .col-md-4 img, .book-cover img, .main-image img', 
+      attr: 'src',
+      alt: 'alt'
+    },
+
+    body: {
+      preferredId: null,
+      headingTags: ['h1', 'h2', '.book-title'], 
+      keywords: { EN: ['.'], FA: ['.'] },
+      // Broad wrapper to ensure we catch the content column
+      contentWrapper: '.col-md-8, .col-md-9, .col-12',
+      paragraphSelector: 'p',
+      sectionKey: 'DESCRIPTION',
+    },
+
+    // Ensure we look everywhere for the PDF
+    cvLink: { 
+      rowSelector: 'div', 
+      keywords: ['.pdf', 'download'] 
+    }, 
+    
+    portfolioLink: null,
+    works: { container: 'a[rel="works"]', captionAttr: 'data-caption' },
+    installations: null,
+  },
+};
+
 export const Configs = {
-    artists: ArtistConfig,
-    exhibitions: ExhibitionConfig,
-    news: NewsItemConfig
+    'artists': ArtistConfig,
+    'exhibitions': ExhibitionConfig,
+    'news': NewsItemConfig,
+    'viewing-rooms': ViewingRoomsConfig,
+    'window': WindowConfig,
+    'studio': StudioConfig,
+    'publications': PublicationsConfig
+
 }
+
