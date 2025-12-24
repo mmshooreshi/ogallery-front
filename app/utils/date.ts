@@ -60,3 +60,65 @@ export function parseDateRange(raw: string): { start: string; end: string } | nu
     end: end.toISOString(),
   }
 }
+
+
+
+
+
+
+export function formatEntryDate(
+  startIso: string | null, 
+  endIso: string | null, 
+  rawString: string | null, 
+  locale: string
+): string {
+  // 1. English Locale (Non-FA)
+  // Usually, we prefer the 'rawString' (e.g. "November 19, 2025") if available.
+  // Otherwise, we format the ISO start date.
+  if (locale !== 'FA') {
+    if (rawString) return rawString
+    if (!startIso) return ''
+    
+    const p = getGregorianParts(startIso, 'en-US')
+    // Format: "Month Day, Year"
+    return `${p.month} ${p.day}, ${p.year}`
+  }
+
+  // 2. Persian Locale (FA)
+  // We must calculate the Jalali date from the ISO string.
+  if (!startIso) return rawString || ''
+
+  const s = getJalaliParts(startIso)
+  
+  // Safety check: if parsing failed, fallback to raw
+  if (!s.day || !s.month || !s.year) return rawString || ''
+
+  // A) Single Date (Publication, News, or same day event)
+  if (!endIso || startIso === endIso) {
+    return `${s.day} ${s.month} ${s.year}`
+  }
+
+  // B) Date Range (Exhibition)
+  const e = getJalaliParts(endIso)
+  
+  // Safety check for end date
+  if (!e.day || !e.month || !e.year) {
+    return `${s.day} ${s.month} ${s.year}`
+  }
+
+  // Scenario 1: Different Years
+  // Example: 10 Esfand 1402 - 5 Farvardin 1403
+  if (s.year !== e.year) {
+    return `${s.day} ${s.month} ${s.year} - ${e.day} ${e.month} ${e.year}`
+  }
+
+  // Scenario 2: Same Year, Different Month
+  // Example: 10 Mehr - 20 Aban 1403
+  if (s.month !== e.month) {
+    return `${s.day} ${s.month} - ${e.day} ${e.month} ${s.year}`
+  }
+
+  // Scenario 3: Same Month, Same Year
+  // Example: 10 - 20 Aban 1403
+  return `${s.day} - ${e.day} ${s.month} ${s.year}`
+}
