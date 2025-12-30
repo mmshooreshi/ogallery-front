@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Luminarium: Luxe Edition</title>
+<style>
+    /* --- 1. CORE LUXURY VARIABLES --- */
+    :root { 
+        --gold: #d4af37; 
+        --gold-light: #f7e39c;
+        --gold-dim: #8a701e;
+        --dark-void: #050505;
+        --glass-surface: rgba(20, 20, 25, 0.6); 
+        --glass-highlight: rgba(255, 255, 255, 0.05);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --neon-blue: #40a0ff;
+        --blur: blur(24px);
+        --ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+        --ease-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+        --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    /* --- 2. GLOBAL RESET & SMOOTHNESS --- */
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; outline: none; }
+    
+    body { 
+        margin: 0; overflow: hidden; background: var(--dark-void); 
+        font-family: var(--font-main); touch-action: none; color: #fff;
+    }
+    
+    canvas { display: block; width: 100vw; height: 100vh; }
+
+    /* --- 3. CINEMATIC TEXT SELECTION --- */
+    ::selection { background: var(--gold); color: #000; }
+
+    /* --- UI LAYERS --- */
+    #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+    #marker-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+
+    /* --- 4. GLASSMORPHIC BUTTONS (HUD) --- */
+    .hud-top { 
+        position: absolute; top: 0; left: 0; width: 100%; padding: 25px; 
+        display: flex; justify-content: space-between; pointer-events: auto; 
+        background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+        z-index: 20;
+    }
+/* ADD TO CSS */
+canvas { 
+    cursor: grab; /* Default cursor */
+}
+canvas:active { 
+    cursor: grabbing; /* When dragging */
+}
+.interactive-hover { cursor: pointer; }
+    /* ADD to <style> block */
+.btn-mini {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: #ccc; font-size: 10px; padding: 6px 10px; border-radius: 6px; cursor: pointer;
+    transition: 0.2s; display: flex; align-items: center; justify-content: center;
+}
+.btn-mini:hover { background: #fff; color: #000; transform: translateY(-1px); }
+.btn-mini.warn:hover { background: #ff4d4d; color: #fff; border-color: #ff4d4d; }
+
+.light-node.global { 
+    border-radius: 50%; min-width: 45px; height: 45px; 
+    font-size: 10px; border-color: rgba(64, 160, 255, 0.3); color: #40a0ff; 
+    letter-spacing: 0;
+}
+.light-node.global.active {
+    background: rgba(64, 160, 255, 0.2); border-color: #40a0ff; color: #fff;
+    box-shadow: 0 0 15px rgba(64, 160, 255, 0.3);
+}
+
+    .btn-icon {
+        width: 52px; height: 52px; border-radius: 50%; 
+        background: var(--glass-surface); 
+        backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+        border: 1px solid var(--glass-border); 
+        color: rgba(255,255,255,0.7); font-size: 20px; 
+        display: flex; align-items: center; justify-content: center; cursor: pointer;
+        transition: all 0.4s var(--ease-elastic);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        position: relative; overflow: hidden;
+    }
+
+    /* --- 5. HOVER GLOW & LIFT --- */
+    .btn-icon:hover {
+        transform: translateY(-2px) scale(1.05);
+        border-color: rgba(255,255,255,0.3);
+        color: #fff;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 15px rgba(212, 175, 55, 0.2);
+    }
+
+    /* --- 6. ACTIVE PRESS (Micro-Interaction) --- */
+    .btn-icon:active { 
+        transform: translateY(1px) scale(0.95); 
+        background: rgba(255,255,255,0.1);
+    }
+
+    /* --- 7. ACTIVE STATE (Gold Ring) --- */
+    .btn-icon.active { 
+        border-color: var(--gold); 
+        color: var(--gold); 
+        background: rgba(212, 175, 55, 0.15); 
+        box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+    }
+
+    /* --- 8. FOCAL SLIDER (Vertical Bar) --- */
+    .focal-slider-container {
+        position: absolute; right: 25px; top: 50%; transform: translateY(-50%);
+        height: 240px; width: 48px; 
+        background: rgba(10, 10, 15, 0.6); 
+        backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+        border-radius: 30px; border: 1px solid var(--glass-border); 
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        pointer-events: auto; 
+        box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        transition: transform 0.3s ease;
+    }
+    
+    .focal-slider-container:hover { transform: translateY(-50%) scale(1.02); border-color: rgba(255,255,255,0.2); }
+
+    input[type=range].vertical {
+        writing-mode: bt-lr; -webkit-appearance: slider-vertical;
+        width: 4px; height: 160px; 
+        background: rgba(255,255,255,0.1); 
+        border-radius: 2px; opacity: 0.6; margin-top: 15px;
+        transition: opacity 0.3s;
+        cursor: ns-resize;
+    }
+    input[type=range].vertical:hover { opacity: 1; }
+
+    /* --- 9. ART MARKERS (Breathing Pulse) --- */
+    .art-marker {
+        position: absolute; width: 44px; height: 44px; 
+        background: rgba(255, 255, 255, 0.05); 
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        cursor: pointer; pointer-events: auto;
+        transform: translate(-50%, -50%) scale(0); 
+        /* Smooth fade in, removed transform from transition to fix JS jump */
+        transition: opacity 0.4s ease, border-color 0.3s, background 0.3s; 
+        backdrop-filter: blur(4px);
+        z-index: 100;
+    }
+    
+    .art-marker:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: var(--gold);
+        box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+    }
+
+    .marker-dot { 
+        width: 6px; height: 6px; background: #fff; border-radius: 50%; 
+        box-shadow: 0 0 10px #fff; 
+        transition: transform 0.3s var(--ease-elastic);
+    }
+    
+    .art-marker:hover .marker-dot { transform: scale(1.5); background: var(--gold); box-shadow: 0 0 15px var(--gold); }
+
+    /* --- 10. GLASS CARD (Modal) --- */
+    .art-card {
+        position: absolute; bottom: 50px; left: 50%; 
+        /* Start slightly lower for entrance animation */
+        transform: translateX(-50%) translateY(60px) scale(0.95);
+        width: 90%; max-width: 420px; 
+        background: rgba(15, 15, 20, 0.85);
+        border: 1px solid rgba(255,255,255,0.1); border-radius: 32px; padding: 35px;
+        backdrop-filter: blur(50px) saturate(180%); -webkit-backdrop-filter: blur(50px) saturate(180%);
+        opacity: 0; visibility: hidden; 
+        transition: all 0.6s var(--ease-elastic); pointer-events: auto;
+        box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    
+    .art-card.active { 
+        opacity: 1; visibility: visible; 
+        transform: translateX(-50%) translateY(0) scale(1); 
+    }
+    
+    /* --- 11. TYPOGRAPHY (Cinematic) --- */
+    .art-card h2 { 
+        margin: 0 0 10px 0; color: #fff; font-size: 26px; 
+        font-weight: 200; letter-spacing: 1px; 
+        background: linear-gradient(90deg, #fff, #aaa); 
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .art-card p { 
+        margin: 0 0 30px 0; color: #bbb; font-size: 14px; 
+        line-height: 1.7; font-weight: 400; letter-spacing: 0.3px;
+    }
+
+    /* --- 12. PRIMARY BUTTON (Liquid Gold) --- */
+    .btn-primary { 
+        width: 100%; padding: 16px; 
+        background: #fff; 
+        border: none; border-radius: 18px; 
+        font-weight: 700; font-size: 12px; color: #000; 
+        letter-spacing: 1.5px; cursor: pointer; 
+        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); 
+        text-transform: uppercase;
+        box-shadow: 0 5px 20px rgba(255,255,255,0.15);
+        position: relative; overflow: hidden;
+    }
+    
+    /* Shine Effect */
+    .btn-primary::after {
+        content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+        transition: 0.5s;
+    }
+    
+    .btn-primary:hover { 
+        transform: translateY(-2px); 
+        background: var(--gold); 
+        box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+    }
+    
+    .btn-primary:hover::after { left: 100%; }
+    
+    .btn-primary:active { transform: scale(0.97) translateY(0); }
+
+    /* --- 13. CLOSE BUTTON (Subtle Rotate) --- */
+    .btn-close {
+        background: transparent; color: rgba(255,255,255,0.4); border: none; 
+        width: 100%; margin-top: 15px; padding: 10px; font-size: 11px; 
+        letter-spacing: 1px; cursor: pointer; text-transform: uppercase;
+        transition: color 0.3s;
+    }
+    .btn-close:hover { color: #fff; }
+
+    /* --- 14. STUDIO PANEL (Slide Up) --- */
+    #studio-panel {
+        position: absolute; bottom: 0; left: 0; width: 100%;
+        background: rgba(12, 12, 16, 0.9); 
+        backdrop-filter: blur(60px); -webkit-backdrop-filter: blur(60px);
+        border-top: 1px solid rgba(255,255,255,0.08);
+        transform: translateY(110%); 
+        transition: transform 0.6s var(--ease-elastic);
+        pointer-events: auto; padding-bottom: max(25px, env(safe-area-inset-bottom));
+        display: flex; flex-direction: column;
+        box-shadow: 0 -20px 80px rgba(0,0,0,0.8);
+    }
+    #studio-panel.visible { transform: translateY(0); }
+
+    .studio-header { padding: 25px 30px; display: flex; justify-content: space-between; align-items: center; }
+    .studio-title { 
+        font-size: 11px; font-weight: 800; letter-spacing: 3px; 
+        color: var(--gold); text-transform: uppercase; 
+        text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+    }
+    .studio-hint { font-size: 10px; color: #555; font-weight: 600; letter-spacing: 0.5px; }
+
+    /* --- 15. LIGHT NODES (Interactive Grid) --- */
+    .light-strip { display: flex; gap: 5px; padding: 5px; overflow-x: auto; scrollbar-width: none; }
+    
+    .light-node {
+        min-width: 45px; height: 45px; background: rgba(255,255,255,0.02); 
+        border: 1px solid rgba(255,255,255,0.05); border-radius: 18px; 
+        color: #555; display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 14px; cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        position: relative;
+    }
+    
+    .light-node:hover { background: rgba(255,255,255,0.08); transform: translateY(-3px); color: #ccc; }
+    
+    .light-node.active { 
+        border-color: var(--gold); color: #fff; 
+        background: linear-gradient(135deg, rgba(212,175,55,0.25), rgba(0,0,0,0));
+        box-shadow: 0 8px 25px rgba(212,175,55,0.15); 
+        transform: translateY(-4px) scale(1.05);
+    }
+
+    /* --- 16. CUSTOM RANGE SLIDERS (Sleek Lines) --- */
+    .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px 40px; padding: 0 30px 15px; }
+    .control-group { display: flex; flex-direction: column; gap: 10px; }
+    .label-row { display: flex; justify-content: space-between; font-size: 9px; color: #777; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
+
+    input[type=range].h-slider { 
+        width: 100%; -webkit-appearance: none; background: transparent; margin: 0; cursor: pointer;
+    }
+    
+    /* Track */
+    input[type=range].h-slider::-webkit-slider-track { 
+        height: 2px; background: rgba(255,255,255,0.1); border-radius: 2px; 
+        transition: background 0.3s;
+    }
+    input[type=range].h-slider:hover::-webkit-slider-track { background: rgba(255,255,255,0.2); }
+    
+    /* Thumb (Handle) */
+    input[type=range].h-slider::-webkit-slider-thumb { 
+        -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; 
+        background: #e0e0e0; margin-top: -6px; 
+        box-shadow: 0 0 0 0 rgba(255,255,255,0);
+        transition: all 0.2s var(--ease-elastic);
+    }
+    
+    /* --- 17. SLIDER ACTIVE STATE --- */
+    input[type=range].h-slider:hover::-webkit-slider-thumb { transform: scale(1.3); background: #fff; }
+    input[type=range].h-slider:active::-webkit-slider-thumb { 
+        transform: scale(1.1); background: var(--gold); 
+        box-shadow: 0 0 0 6px rgba(212, 175, 55, 0.2);
+    }
+
+    /* --- 18. RIPPLE EFFECT (Refined Physics) --- */
+    .ripple {
+        position: absolute; border-radius: 50%; 
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        transform: translate(-50%, -50%); pointer-events: none;
+        animation: rip-anim 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        box-shadow: 0 0 20px rgba(255,255,255,0.3);
+    }
+    @keyframes rip-anim { 
+        0% { width: 0; height: 0; opacity: 1; border-width: 4px; } 
+        100% { width: 200px; height: 200px; opacity: 0; border-width: 0; } 
+    }
+
+    /* --- 19. LOADING SCREEN (Shimmer) --- */
+    #loading { 
+        position: absolute; top:0; left:0; width:100%; height:100%; 
+        background: var(--dark-void); color: var(--gold); 
+        display:flex; align-items:center; justify-content:center; 
+        letter-spacing: 6px; font-size: 11px; font-weight: 700; 
+        z-index: 9999; transition: opacity 1s ease; 
+        text-transform: uppercase;
+    }
+    /* Loading text pulse */
+    #loading::after {
+        content: ''; position: absolute; width: 200px; height: 1px;
+        background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        bottom: 45%; animation: scan 2s infinite ease-in-out;
+    }
+    @keyframes scan { 0% { transform: translateX(-100px); opacity:0; } 50% { opacity:1; } 100% { transform: translateX(100px); opacity:0; } }
+
+    /* --- 20. CUSTOM CURSOR HINTS --- */
+    /* Add a subtle custom cursor feel when hovering interactive elements */
+    .interactive-hover { cursor: url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" opacity="0.8"/></svg>') 12 12, auto; }
+
+</style>
+</head>
+<body>
+    <div id="loading">GENERATING GALLERY...</div>
+    <canvas id="gl-canvas"></canvas>
+    <div id="marker-layer"></div>
+    <div id="ui-layer">
+        
+        <div class="hud-top">
+            <div class="btn-icon" id="btn-mode" onclick="App.toggleMode()">🛠️</div>
+            <div class="btn-icon" id="btn-undo" onclick="App.undo()" style="opacity:0.5">↺</div>
+        </div>
+        <div class="focal-slider-container">
+            <span style="font-size:14px; color:#fff; margin-bottom:10px; opacity:0.8">🔭</span>
+            <input type="range" class="vertical" min="20" max="200" value="60" oninput="App.setFov(this.value)">
+        </div>
+        <div class="art-card" id="art-card">
+            <h2 id="ac-title">Art Title</h2>
+            <p id="ac-desc">Description goes here.</p>
+            <button class="btn-primary" onclick="App.gotoNextArt()">Visit Next</button>
+            <button class="btn-close" onclick="App.closeCard()">Close</button>
+        </div>
+        <div id="studio-panel">
+            <div class="studio-header">
+                <span class="studio-title">Light Designer</span>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-mini" onclick="App.exportSettings()" title="Download JSON">⬇</button>
+                    <button class="btn-mini" onclick="document.getElementById('upl').click()" title="Upload JSON">⬆</button>
+                    <button class="btn-mini warn" onclick="App.resetSettings()" title="Reset to Default">↺</button>
+                    <input type="file" id="upl" style="display:none" onchange="App.importSettings(event)" accept=".json">
+                </div>
+            </div>
+            <div class="light-strip" id="light-strip"></div>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <div class="label-row"><span>Lumen</span><span id="lbl-int">1.0</span></div>
+                    <input type="range" class="h-slider" min="0" max="8" step="0.1" id="sl-int" onchange="App.saveState()" oninput="App.updateLight('intensity', this.value)">
+                </div>
+                <div class="control-group">
+                    <div class="label-row"><span>Hue</span><span id="lbl-col">Warm</span></div>
+                    <input type="range" class="h-slider" min="0" max="360" step="1" id="sl-col" onchange="App.saveState()" oninput="App.updateLight('color', this.value)">
+                </div>
+                <div class="control-group">
+                    <div class="label-row"><span>Focus</span><span id="lbl-ang">30°</span></div>
+                    <input type="range" class="h-slider" min="0.1" max="1.2" step="0.05" id="sl-ang" onchange="App.saveState()" oninput="App.updateLight('angle', this.value)">
+                </div>
+                <div class="control-group">
+                    <div class="label-row"><span>Softness</span><span id="lbl-pen">0.5</span></div>
+                    <input type="range" class="h-slider" min="0" max="1" step="0.05" id="sl-pen" onchange="App.saveState()" oninput="App.updateLight('penumbra', this.value)">
+                </div>
+            </div>
+
+            
+        </div>
+    </div>
+    <!-- THREE.JS & TWEEN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <script>
+        // --- HISTORY SYSTEM ---
+        class HistoryStack {
+            constructor() { this.stack = []; }
+            push(state) {
+                if(this.stack.length > 20) this.stack.shift();
+                this.stack.push(state);
+                document.getElementById('btn-undo').style.opacity = 1;
+            }
+            pop() { return this.stack.pop(); }
+        }
+        const App = {
+            scene: null, camera: null, renderer: null,
+            mode: 'walk', // walk | studio
+            lights: [],
+            arts: [],
+            colliders: [], // Objects to collide with
+            selLightIdx: 0,
+            history: new HistoryStack(),
+            textureLoader: new THREE.TextureLoader(),
+            // IN: App object properties
+            visited: new Set(), // Memory to prevent loops
+            raycaster: new THREE.Raycaster(),
+            mouse: new THREE.Vector2(),
+            
+            player: {
+
+                pos: new THREE.Vector3(10, 10, 10), 
+                velocity: new THREE.Vector3(), // For smooth acceleration
+                rot: new THREE.Euler(0, 0, 0, 'YXZ'),
+                targetLook: new THREE.Vector3(0, 2, 0), // Where eyes want to go
+                dest: null,
+                isWalking: false,
+                headHeight: 3,
+                bobTimer: 0                
+            },
+            input: {
+                active: false,
+                mode: null,
+                startX: 0, startY: 0,
+                lastX: 0, lastY: 0,
+                touchId: null, touchId2: null,
+                tapTime: 0
+            },
+            // --- INIT ---
+            init() {
+                this.scene = new THREE.Scene();
+                // this.scene.background = new THREE.Color(0x050505);
+                // this.scene.fog = new THREE.FogExp2(0x050505, 0.02);
+
+
+                // CHANGE: Brighter, tinted background and fog
+                this.scene.background = new THREE.Color(0x0a0a14); // Deep Midnight Blue
+                this.scene.fog = new THREE.FogExp2(0x0a0a14, 0.015); // Lighter fog for depth
+
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+                
+                this.renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gl-canvas'), antialias: true, powerPreference: "high-performance" });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                this.renderer.outputEncoding = THREE.sRGBEncoding;
+                this.buildWorld();
+                this.loadSettings(); // Load from LocalStorage or Default
+                this.setupLights();
+                this.setupInputs();
+                this.setupUI();
+                requestAnimationFrame(this.animate.bind(this));
+                
+                setTimeout(() => document.getElementById('loading').style.opacity = 0, 1500);
+                setTimeout(() => document.getElementById('loading').remove(), 2000);
+            },
+            // --- LUXURY WORLD GENERATION ---
+            buildWorld() {
+                // Procedural Luxury Materials
+                const noiseTex = (color, grain) => {
+                    const c = document.createElement('canvas'); c.width=512; c.height=512;
+                    const ctx = c.getContext('2d');
+                    ctx.fillStyle = color; ctx.fillRect(0,0,512,512);
+                    if(grain) {
+                        ctx.fillStyle = '#000'; ctx.globalAlpha = 0.03;
+                        for(let i=0; i<40000; i++) ctx.fillRect(Math.random()*512, Math.random()*512, 1, 1);
+                    }
+                    const t = new THREE.CanvasTexture(c);
+                    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+                    return t;
+                };
+                // Pattern Textures (Linen / Geometric)
+                const patternTex = (c1, c2) => {
+                    const c = document.createElement('canvas'); c.width=512; c.height=512;
+                    const ctx = c.getContext('2d');
+                    ctx.fillStyle = c1; ctx.fillRect(0,0,512,512);
+                    
+                    ctx.strokeStyle = c2; ctx.lineWidth = 1; ctx.globalAlpha = 0.08;
+                    // Crosshatch
+                    for(let i=0; i<=512; i+=4) {
+                        ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,512); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(512,i); ctx.stroke();
+                    }
+                    // Subtle Larger Grid
+                    ctx.lineWidth = 2; ctx.globalAlpha = 0.05;
+                    for(let i=0; i<=512; i+=128) {
+                        ctx.strokeRect(i, 0, 1, 512);
+                        ctx.strokeRect(0, i, 512, 1);
+                    }
+                    
+                    const t = new THREE.CanvasTexture(c);
+                    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+                    return t;
+                };
+                // Materials
+                const floorMat = new THREE.MeshPhysicalMaterial({ 
+                    map: noiseTex('#0f0f12', true), 
+                    roughness: 0.1, metalness: 0.2, clearcoat: 1.0, clearcoatRoughness: 0.1 
+                });
+                floorMat.map.repeat.set(8,8);
+                const wallMat = new THREE.MeshStandardMaterial({ 
+                    map: patternTex('#222', '#666'), roughness: 0.8, color: 0xeeeeee 
+                });
+                wallMat.map.repeat.set(4,2);
+                const goldMat = new THREE.MeshStandardMaterial({ 
+                    color: 0xffd700, metalness: 1, roughness: 0.3 
+                });
+                // --- ARCHITECTURE ---
+                // Floor
+                const floor = new THREE.Mesh(new THREE.PlaneGeometry(60,60), floorMat);
+                floor.rotation.x = -Math.PI/2;
+                floor.receiveShadow = true;
+                this.scene.add(floor);
+                this.floor = floor;
+                // Function to create smooth curved wall sections
+                const createCurvedWall = (x, z, rotY, length) => {
+                    const h = 8;
+                    const d = 0.6;
+                    const wall = new THREE.Mesh(new THREE.BoxGeometry(length, h, d), wallMat);
+                    wall.position.set(x, h/2, z);
+                    wall.rotation.y = rotY;
+                    wall.castShadow = true; wall.receiveShadow = true;
+                    this.scene.add(wall);
+                    
+                    const box = new THREE.Box3().setFromObject(wall);
+                    this.colliders.push(box);
+                };
+                // // Gallery Layout
+                createCurvedWall(0, -15, 0, 40); // Back
+                createCurvedWall(-20, 0, Math.PI/2, 30); // Left
+                createCurvedWall(20, 0, Math.PI/2, 30); // Right
+                createCurvedWall(0, 15, 0, 40); // Front
+
+                
+   
+
+
+                // Central Features
+                const pillarGeo = new THREE.CylinderGeometry(1.5, 1.5, 8, 32);
+                const p1 = new THREE.Mesh(pillarGeo, wallMat); p1.position.set(-8, 4, 0);
+                const p2 = new THREE.Mesh(pillarGeo, wallMat); p2.position.set(8, 4, 0);
+                p1.castShadow=true; p1.receiveShadow=true;
+                p2.castShadow=true; p2.receiveShadow=true;
+                this.scene.add(p1); this.scene.add(p2);
+                
+                this.colliders.push(new THREE.Box3().setFromObject(p1));
+                this.colliders.push(new THREE.Box3().setFromObject(p2));
+                // Benches
+                const createBench = (x, z, rotY) => {
+                    const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rotY;
+                    const seat = new THREE.Mesh(new THREE.BoxGeometry(3, 0.4, 1), new THREE.MeshStandardMaterial({color: 0x1a1a1a, roughness: 0.9}));
+                    seat.position.y = 0.5;
+                    const legGeo = new THREE.BoxGeometry(0.2, 0.5, 1);
+                    const legMat = new THREE.MeshStandardMaterial({color: 0x3d2b1f, roughness: 0.8});
+                    const l1 = new THREE.Mesh(legGeo, legMat); l1.position.set(-1.2, 0.25, 0);
+                    const l2 = new THREE.Mesh(legGeo, legMat); l2.position.set(1.2, 0.25, 0);
+                    g.add(seat, l1, l2);
+                    g.castShadow = true;
+                    seat.castShadow = true; seat.receiveShadow = true;
+                    this.scene.add(g);
+                    this.colliders.push(new THREE.Box3().setFromObject(g));
+                };
+                createBench(0, 0, 0);
+                createBench(-14, -8, Math.PI/2);
+                createBench(14, -8, Math.PI/2);
+
+                // --- ARTWORK WITH IMAGE URLS ---
+                const createArt = (pos, rotY, imgUrl, title, desc) => {
+                    const group = new THREE.Group();
+                    group.position.copy(pos);
+                    group.rotation.y = rotY;
+
+                    // Frame
+                    const fGeo = new THREE.BoxGeometry(3.2, 4.2, 0.15);
+                    const frame = new THREE.Mesh(fGeo, new THREE.MeshStandardMaterial({color:0x111, roughness:0.5}));
+                    
+                    // Canvas (Load Image from URL)
+                    const cGeo = new THREE.PlaneGeometry(2.8, 3.8);
+                    const texture = this.textureLoader.load(imgUrl);
+                    texture.encoding = THREE.sRGBEncoding;
+                    
+                    const canvas = new THREE.Mesh(cGeo, new THREE.MeshStandardMaterial({
+                        map: texture,
+                        roughness: 0.3,
+                        metalness: 0.1
+                    }));
+                    canvas.position.z = 0.08;
+                    
+                    frame.add(canvas);
+                    group.add(frame);
+                    this.scene.add(group);
+
+                    const iPos = pos.clone().add(new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(0,1,0), rotY));
+                    this.arts.push({
+                        id: this.arts.length,
+                        pos: pos,
+                        viewPos: iPos,
+                        title: title,
+                        desc: desc,
+                        el: null,
+                        rot: rotY
+                    });
+                };
+
+                // MAP YOUR ASSETS HERE
+                createArt(new THREE.Vector3(0, 3.5, -14.2), 0, 'assets/7.jpg', "Visual Sequence I", "A primary focus on contrast and depth.");
+                createArt(new THREE.Vector3(-8, 3.5, -14.2), 0, 'assets/8.jpg', "Abstract Motion", "Capturing the kinetic energy of the digital age.");
+                createArt(new THREE.Vector3(8, 3.5, -14.2), 0, 'assets/9.jpg', "Symmetry", "Exploring balance through organic and geometric fusion.");
+                createArt(new THREE.Vector3(-19.2, 3.5, 0), Math.PI/2, 'assets/10.jpg', "Perspective Shift", "An invitation to view the world through a new lens.");
+                createArt(new THREE.Vector3(19.2, 3.5, 0), -Math.PI/2, 'assets/5.jpg', "The Archive", "A collection of moments frozen in chromatic space.");
+                createArt(new THREE.Vector3(0, 3.5, 14.2), Math.PI, 'assets/6.jpg', "Infinite Loop", "The cycle of creation and destruction.");
+
+                // Markers
+                const layer = document.getElementById('marker-layer');
+                this.arts.forEach(a => {
+                    const el = document.createElement('div');
+                    el.className = 'art-marker';
+                    el.innerHTML = '<div class="marker-dot"></div>';
+                    // el.onclick = (e) => { e.stopPropagation(); this.openCard(a); };
+                    el.onclick = (e) => { 
+                    e.stopPropagation(); 
+                    this.handleMarkerClick(a); 
+                };
+                    layer.appendChild(el);
+                    a.el = el;
+                });
+            },
+            // IN: App object (Add these new methods)
+
+loadSettings() {
+    const saved = localStorage.getItem('luxe_settings');
+    // Default Settings Structure
+    const defaults = {
+        ambient: { color: 0x111111, intensity: 1.0 },
+        hemi: { sky: 0xebeeff, ground: 0x221133, intensity: 0.6 },
+        fill: { color: 0x8a70ff, intensity: 0.8, dist: 40, pos: [0, 10, 0] },
+        rim: { color: 0x40a0ff, intensity: 0.5, pos: [-10, 10, -10] },
+        spots: [
+            { pos: [0, 9, -8], target: [0, 2, -13], color: 0xffd700, int: 2, angle: 0.5, pen: 0.4 },
+            { pos: [-8, 9, -8], target: [-8, 2, -13], color: 0xffd700, int: 2, angle: 0.5, pen: 0.4 },
+            { pos: [8, 9, -8], target: [8, 2, -13], color: 0xffd700, int: 2, angle: 0.5, pen: 0.4 },
+            { pos: [-12, 9, 0], target: [-17, 2, 0], color: 0xffd700, int: 2, angle: 0.5, pen: 0.4 },
+            { pos: [12, 9, 0], target: [17, 2, 0], color: 0xffd700, int: 2, angle: 0.5, pen: 0.4 },
+            { pos: [0, 9, 8], target: [0, 2, 13], color: 0xffd700, int: 2, angle: 0.5, pen: 0.4 }
+        ]
+    };
+
+    if (saved) {
+        try { 
+            this.settings = JSON.parse(saved); 
+            // Merge with defaults to ensure structure exists if saved data is old
+            this.settings = { ...defaults, ...this.settings };
+        } catch(e) { 
+            console.error('Settings Corrupt'); 
+            this.settings = defaults;
+        }
+    } else {
+        this.settings = defaults;
+    }
+},
+
+saveSettings() {
+    localStorage.setItem('luxe_settings', JSON.stringify(this.settings));
+},
+
+exportSettings() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.settings, null, 2));
+    const node = document.createElement('a');
+    node.setAttribute("href", dataStr);
+    node.setAttribute("download", "luxe_gallery_settings.json");
+    document.body.appendChild(node);
+    node.click();
+    node.remove();
+},
+
+importSettings(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            this.settings = JSON.parse(e.target.result);
+            this.saveSettings();
+            this.setupLights(); // Rebuild world with new settings
+            if(this.mode === 'studio') this.setupUI(); // Refresh UI
+            alert('Studio Configuration Loaded');
+        } catch (err) { alert('Invalid JSON'); }
+    };
+    reader.readAsText(file);
+},
+
+resetSettings() {
+    if(confirm('Reset all lights to factory default?')) {
+        localStorage.removeItem('luxe_settings');
+        this.loadSettings(); // Reloads defaults
+        this.setupLights();
+        if(this.mode === 'studio') this.setupUI();
+    }
+},
+// IN: App object
+// REPLACE: setupLights()
+
+setupLights() {
+    // 1. Cleanup
+    this.lights.forEach(l => {
+        if(l.helper) this.scene.remove(l.helper);
+        if(l.group) this.scene.remove(l.group);
+        else this.scene.remove(l.obj);
+    });
+    this.lights = [];
+
+    const s = this.settings;
+
+    // --- GLOBAL LIGHTS ---
+    // 1. Ambient
+    const amb = new THREE.AmbientLight(s.ambient.color, s.ambient.intensity);
+    this.scene.add(amb);
+    this.lights.push({ type: 'ambient', obj: amb, data: s.ambient, label: 'AMB' });
+
+    // 2. Hemisphere
+    const hemi = new THREE.HemisphereLight(s.hemi.sky, s.hemi.ground, s.hemi.intensity);
+    this.scene.add(hemi);
+    this.lights.push({ type: 'hemi', obj: hemi, data: s.hemi, label: 'HEMI' });
+
+    // 3. Fill (Point)
+    const fill = new THREE.PointLight(s.fill.color, s.fill.intensity, s.fill.dist);
+    fill.position.set(...s.fill.pos);
+    this.scene.add(fill);
+    this.lights.push({ type: 'fill', obj: fill, data: s.fill, label: 'FILL' });
+
+    // 4. Rim (Directional)
+    const rim = new THREE.DirectionalLight(s.rim.color, s.rim.intensity);
+    rim.position.set(...s.rim.pos);
+    this.scene.add(rim);
+    this.lights.push({ type: 'rim', obj: rim, data: s.rim, label: 'RIM' });
+
+    // --- SPOTLIGHTS ---
+    s.spots.forEach((d, i) => {
+        const g = new THREE.Group(); g.position.set(...d.pos);
+        
+        // Visual Fixture
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.6), new THREE.MeshStandardMaterial({color:0x111}));
+        body.rotation.x = Math.PI/2;
+        const yoke = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.1), new THREE.MeshStandardMaterial({color:0x333}));
+        yoke.position.y = 0.4;
+        const head = new THREE.Group(); head.add(body);
+        const swivel = new THREE.Group(); swivel.add(yoke); swivel.add(head);
+        g.add(swivel);
+        this.scene.add(g);
+
+        // Light
+        const spot = new THREE.SpotLight(d.color, d.int);
+        spot.position.set(0,0,0);
+        spot.angle = d.angle;
+        spot.penumbra = d.pen;
+        spot.decay = 2; spot.distance = 50; spot.castShadow = true;
+        head.add(spot);
+
+        const target = new THREE.Object3D();
+        target.position.set(...d.target);
+        this.scene.add(target);
+        spot.target = target;
+
+        const helper = new THREE.SpotLightHelper(spot, d.color);
+        helper.visible = false;
+        this.scene.add(helper);
+
+        // Proxy for clicking
+        const proxy = new THREE.Mesh(new THREE.ConeGeometry(3, 10, 8, 1, true), new THREE.MeshBasicMaterial({visible:false, side:THREE.DoubleSide}));
+        proxy.position.set(...d.pos);
+        this.scene.add(proxy);
+
+        this.lights.push({ 
+            type: 'spot', id: i, 
+            light: spot, obj: spot, // Alias for generic access
+            target, group: g, swivel, head, helper, proxy, 
+            data: d, label: i+1 
+        });
+        
+        // Initial Orientation
+        this.updateLightRig(this.lights[this.lights.length-1]);
+    });
+},           
+// IN: App Object
+// REPLACE: setupInputs()
+
+setupInputs() {
+    const cvs = this.renderer.domElement;
+
+    // --- 1. UNIFIED POINTER HANDLING (Mouse & Touch) ---
+    const handleStart = (x, y) => {
+        if(this.isCinematic) return; // Don't move if in cinematic mode
+        this.input.startX = x; this.input.startY = y;
+        this.input.lastX = x; this.input.lastY = y;
+        this.input.tapTime = Date.now();
+        this.input.active = true;
+        
+        // Studio Mode Logic
+        if(this.mode === 'studio') {
+             this.mouse.x = (x/window.innerWidth)*2-1;
+             this.mouse.y = -(y/window.innerHeight)*2+1;
+             this.raycaster.setFromCamera(this.mouse, this.camera);
+             const l = this.lights[this.selLightIdx];
+             if(l && this.raycaster.intersectObject(l.proxy).length > 0) {
+                 this.input.mode = 'dragTarget';
+                 this.saveState();
+             } else {
+                 this.input.mode = 'orbit';
+             }
+        } else {
+            this.input.mode = 'look';
+        }
+    };
+
+    const handleMove = (x, y) => {
+        if(!this.input.active || this.isCinematic) return;
+        
+        const dx = x - this.input.lastX;
+        const dy = y - this.input.lastY;
+
+        if(this.mode === 'walk' && this.input.mode === 'look') {
+            // Mouse sensitivity is usually lower than touch, so we adjust slightly
+            const sens = 0.0025; 
+            this.player.rot.y -= dx * sens;
+            this.player.rot.x -= dy * sens;
+            this.player.rot.x = Math.max(-1.4, Math.min(1.4, this.player.rot.x));
+        }
+        else if (this.mode === 'studio') {
+             // (Keep existing studio drag logic, just using x/y)
+             const l = this.lights[this.selLightIdx];
+             if(this.input.mode === 'orbit') {
+                 this.camera.rotation.y -= dx * 0.004;
+                 this.camera.rotation.x -= dy * 0.004;
+             }
+             else if (this.input.mode === 'dragTarget') {
+                 this.mouse.x = (x/window.innerWidth)*2-1;
+                 this.mouse.y = -(y/window.innerHeight)*2+1;
+                 this.raycaster.setFromCamera(this.mouse, this.camera);
+                 const hits = this.raycaster.intersectObject(this.floor);
+                 if(hits.length>0) {
+                     l.target.position.copy(hits[0].point);
+                     this.updateLightRig(l);
+                 }
+             }
+        }
+        this.input.lastX = x; this.input.lastY = y;
+    };
+
+    const handleEnd = (x, y) => {
+        if(!this.input.active) return;
+        this.input.active = false;
+
+        const dur = Date.now() - this.input.tapTime;
+        const dist = Math.hypot(x - this.input.startX, y - this.input.startY);
+
+        // TAP DETECTION (Click to Walk)
+        if (this.mode === 'walk' && dur < 300 && dist < 5 && !this.isCinematic) {
+            this.mouse.x = (x/window.innerWidth)*2-1;
+            this.mouse.y = -(y/window.innerHeight)*2+1;
+            this.raycaster.setFromCamera(this.mouse, this.camera);
+            const hits = this.raycaster.intersectObject(this.floor);
+            
+            // Check if we clicked a marker first (priority)
+            // (Markers handle their own clicks via DOM, this is for floor walking)
+            if(hits.length > 0) {
+                this.startWalk(hits[0].point);
+                
+                // Visual Ripple
+                const rip = document.createElement('div');
+                rip.className = 'ripple';
+                rip.style.left = x+'px'; rip.style.top = y+'px';
+                document.body.appendChild(rip);
+                setTimeout(()=>rip.remove(), 800);
+            }
+        }
+    };
+
+    // --- MOUSE LISTENERS ---
+    cvs.addEventListener('mousedown', e => {
+        if(e.target.closest('.interactive')) return;
+        handleStart(e.clientX, e.clientY);
+    });
+    window.addEventListener('mousemove', e => {
+        handleMove(e.clientX, e.clientY);
+        
+        // HOVER CURSOR LOGIC (Raycast for markers/art)
+        if(this.mode === 'walk' && !this.input.active) {
+            this.mouse.x = (e.clientX/window.innerWidth)*2-1;
+            this.mouse.y = -(e.clientY/window.innerHeight)*2+1;
+            this.raycaster.setFromCamera(this.mouse, this.camera);
+            // Check collision with Art Frames or Markers if you want pointer cursor
+            // (Optional, mostly CSS handles markers)
+        }
+    });
+    window.addEventListener('mouseup', e => handleEnd(e.clientX, e.clientY));
+
+    // --- TOUCH LISTENERS ---
+    cvs.addEventListener('touchstart', e => {
+        if(e.target.closest('.interactive')) return;
+        e.preventDefault(); // Prevent scrolling
+        handleStart(e.touches[0].clientX, e.touches[0].clientY);
+    }, {passive: false});
+    
+    cvs.addEventListener('touchmove', e => {
+        e.preventDefault();
+        handleMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, {passive: false});
+    
+    cvs.addEventListener('touchend', e => {
+        handleEnd(this.input.lastX, this.input.lastY);
+    });
+
+    // --- 2. KEYBOARD CONTROLS (WASD) ---
+    this.keys = { w:false, a:false, s:false, d:false };
+    window.addEventListener('keydown', e => {
+        const k = e.key.toLowerCase();
+        if(this.keys[k] !== undefined) this.keys[k] = true;
+    });
+    window.addEventListener('keyup', e => {
+        const k = e.key.toLowerCase();
+        if(this.keys[k] !== undefined) this.keys[k] = false;
+    });
+},
+startWalk(point) {
+                TWEEN.removeAll();
+                this.player.isWalking = true;
+                this.player.dest = point;
+            },
+            checkCollision(newPos) {
+                const pBox = new THREE.Box3().setFromCenterAndSize(newPos, new THREE.Vector3(0.5, 2, 0.5));
+                for(let b of this.colliders) {
+                    if(pBox.intersectsBox(b)) return true;
+                }
+                return false;
+            },
+            // IN: App object
+
+            // 1. SMART CLICK HANDLER
+// IN: App object
+// REPLACE: handleMarkerClick
+
+handleMarkerClick(art) {
+    const dist = this.player.pos.distanceTo(art.pos);
+    
+    // Scenario A: Far away -> Walk there (Full sequence)
+    if (dist > 7) {
+        this.moveToArt(art);
+    } 
+    // Scenario B: Close by -> Just turn head to face it
+    else {
+        this.turnToArt(art);
+    }
+},
+            // 2. REUSABLE HUMAN MOVEMENT (Turn -> Walk -> Look -> Open)
+// IN: App Object
+
+// REPLACE: moveToArt
+
+
+
+// IN: App Object
+// REPLACE: moveToArt
+
+// IN: App Object
+// REPLACE: turnToArt
+
+turnToArt(targetArt) {
+    this.isCinematic = true; // LOCK
+    this.closeCard();
+    TWEEN.removeAll();
+
+    const startQ = this.camera.quaternion.clone();
+    
+    // Calculate "Look At" Rotation
+    const artLookTarget = targetArt.pos.clone().add(new THREE.Vector3(0, 0.5, 0));
+    const mat = new THREE.Matrix4().lookAt(this.camera.position, artLookTarget, new THREE.Vector3(0,1,0));
+    const endQ = new THREE.Quaternion().setFromRotationMatrix(mat);
+
+    new TWEEN.Tween({ t: 0 })
+        .to({ t: 1 }, 1500) // Slower, relaxed turn
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .onUpdate(obj => {
+            this.camera.quaternion.slerpQuaternions(startQ, endQ, obj.t);
+        })
+        .onComplete(() => {
+            // Sync Player Memory
+            const e = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
+            this.player.rot.copy(e);
+            
+            this.isCinematic = false; // UNLOCK
+            this.openCard(targetArt);
+        })
+        .start();
+},// REPLACE: turnToArt
+
+
+// IN: App Object
+// REPLACE: moveToArt
+
+// IN: App Object
+// REPLACE: moveToArt
+
+// IN: App Object
+// REPLACE: moveToArt
+
+moveToArt(targetArt) {
+    // 1. LOCK & RESET
+    this.isCinematic = true; 
+    this.player.isWalking = false;
+    this.player.dest = null;
+    this.closeCard();
+    TWEEN.removeAll();
+
+    // 2. GEOMETRY SETUP
+    const startPos = this.camera.position.clone();
+    const startRot = this.camera.quaternion.clone(); // <--- CRITICAL: Save where we are looking NOW
+
+    // End Position
+    const normal = new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(0,1,0), targetArt.rot);
+    const endPos = targetArt.pos.clone().add(normal.multiplyScalar(6.0));
+    endPos.y = this.player.headHeight;
+
+    // TARGETS
+    // A: Look at Path
+    const pathLookTarget = endPos.clone().sub(new THREE.Vector3(0, 0.5, 0)); 
+    const matPath = new THREE.Matrix4().lookAt(startPos, pathLookTarget, new THREE.Vector3(0,1,0));
+    const qPath = new THREE.Quaternion().setFromRotationMatrix(matPath);
+
+    // B: Look at Art
+    const artLookTarget = targetArt.pos.clone().add(new THREE.Vector3(0, 0.5, 0));
+    const matArt = new THREE.Matrix4().lookAt(endPos, artLookTarget, new THREE.Vector3(0,1,0));
+    const qArt = new THREE.Quaternion().setFromRotationMatrix(matArt);
+
+    // 3. THE "BIOLOGICAL" TWEEN
+    new TWEEN.Tween({ t: 0 })
+        .to({ t: 1 }, 3500)
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .onUpdate(obj => {
+            const t = obj.t; 
+
+            // --- A. BODY MOVEMENT ---
+            this.camera.position.lerpVectors(startPos, endPos, t);
+
+            // --- B. HUMAN GAZE LOGIC (Fixed for Jumps) ---
+            const currentQ = new THREE.Quaternion();
+
+            // PHASE 1: ORIENTATION (0% - 15%)
+            // Smoothly turn from "Current Look" to "Path Direction"
+            // This prevents the T=0 Jump.
+            if (t < 0.15) {
+                const orientT = t / 0.15; // 0.0 to 1.0
+                // Smooth Step ease for soft start
+                const easeOrient = orientT * orientT * (3 - 2 * orientT); 
+                currentQ.slerpQuaternions(startRot, qPath, easeOrient);
+            } 
+            // PHASE 2: DRIFT (15% - 100%)
+            // Biological drift from "Path Direction" to "Art"
+            else {
+                const driftT = (t - 0.15) / 0.85; // 0.0 to 1.0
+                // "Sticky" ease (accelerates in middle)
+                const easeDrift = driftT < 0.5 ? 2 * driftT * driftT : -1 + (4 - 2 * driftT) * driftT;
+                currentQ.slerpQuaternions(qPath, qArt, easeDrift);
+            }
+
+            // --- C. BIOLOGICAL NOISE (Retained) ---
+            const intensity = Math.sin(t * Math.PI); 
+            
+            // 1. Vertical Stabilization (VOR)
+            const stepCycle = t * 14;
+            const headBob = Math.sin(stepCycle) * 0.05 * intensity;
+            this.camera.position.y += headBob;
+
+            const stabilizePitch = Math.cos(stepCycle) * 0.005 * intensity; 
+            const qStabilize = new THREE.Quaternion().setFromEuler(new THREE.Euler(stabilizePitch, 0, 0));
+            
+            // 2. Micro-Saccades (Retinal Jitter)
+            const jitterX = Math.sin(t * 45) * 0.002 * intensity;
+            const jitterY = Math.cos(t * 30) * 0.002 * intensity;
+            const qJitter = new THREE.Quaternion().setFromEuler(new THREE.Euler(jitterX, jitterY, 0));
+
+            // 3. Organic Sway
+            const swayZ = Math.cos(t * 5) * 0.02 * intensity;
+            const qSway = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, swayZ));
+
+            // --- D. COMPOSE ---
+            this.camera.quaternion.copy(currentQ);
+            this.camera.quaternion.multiply(qSway);
+            this.camera.quaternion.multiply(qStabilize); 
+            this.camera.quaternion.multiply(qJitter);
+        })
+        .onComplete(() => {
+            // 4. PERFECT LANDING
+            this.player.pos.copy(this.camera.position);
+            
+            const e = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
+            this.player.rot.copy(e);
+            this.player.rot.z = 0;
+            
+            this.isCinematic = false; 
+            this.openCard(targetArt);
+        })
+        .start();
+},
+// REPLACE: gotoNextArt
+
+
+
+gotoNextArt() {
+
+    this.closeCard();
+
+    if (this.currentArt) this.visited.add(this.currentArt.id);
+
+
+
+    // Filter out visited
+
+    let candidates = this.arts.filter(a => !this.visited.has(a.id));
+
+    
+
+    // Reset if all visited
+
+    if (candidates.length === 0) {
+
+        this.visited.clear();
+
+        candidates = this.arts.filter(a => a !== this.currentArt);
+
+    }
+
+
+
+    // Sort by distance
+
+    const currentPos = this.player.pos;
+
+    candidates.sort((a, b) => a.pos.distanceToSquared(currentPos) - b.pos.distanceToSquared(currentPos));
+
+    
+
+    // Go
+
+    const next = candidates[0];
+
+    if(next) this.moveToArt(next);
+
+},
+saveState() {
+                const l = this.lights[this.selLightIdx];
+                this.history.push({
+                    idx: this.selLightIdx,
+                    pos: l.group.position.clone(), target: l.target.position.clone(),
+                    int: l.light.intensity, col: l.light.color.getHex(),
+                    ang: l.light.angle, pen: l.light.penumbra
+                });
+            },
+            undo() {
+                const s = this.history.pop();
+                if(!s) return;
+                if(s.idx !== this.selLightIdx) this.selectLight(s.idx);
+                const l = this.lights[s.idx];
+                l.group.position.copy(s.pos); l.proxy.position.copy(s.pos); l.target.position.copy(s.target);
+                l.light.intensity = s.int; l.light.color.setHex(s.col);
+                l.light.angle = s.ang; l.light.penumbra = s.pen;
+                this.updateLightRig(l);
+                this.updateUIValues(l);
+            },
+
+// IN: App Object
+// REPLACE: updateLightRig(l)
+
+updateLightRig(l) {
+    // FIX: Safety Check - Only Spotlights have physical rigs
+    if (l.type !== 'spot' || !l.swivel) return;
+
+    // 1. Swivel (Y-Axis rotation)
+    l.swivel.lookAt(l.target.position.x, l.group.position.y, l.target.position.z);
+    
+    // 2. Head Tilt (X-Axis rotation)
+    const dy = l.target.position.y - l.group.position.y;
+    const dist = Math.hypot(l.target.position.x - l.group.position.x, l.target.position.z - l.group.position.z);
+    l.head.rotation.x = Math.atan2(-dy, dist);
+    
+    // 3. Update Helpers
+    if(l.helper) l.helper.update();
+    
+    // 4. Update Click Proxy (Invisible cone for selecting)
+    if(l.proxy) {
+        l.proxy.rotation.copy(l.swivel.rotation); 
+        l.proxy.rotateX(l.head.rotation.x);
+    }
+},           updateUIValues(l) {
+                document.getElementById('sl-int').value = l.light.intensity;
+                document.getElementById('lbl-int').innerText = l.light.intensity.toFixed(1);
+                document.getElementById('sl-ang').value = l.light.angle;
+                document.getElementById('sl-pen').value = l.light.penumbra;
+            },
+            toggleMode() {
+                this.mode = this.mode==='walk'?'studio':'walk';
+                const p = document.getElementById('studio-panel');
+                const b = document.getElementById('btn-mode');
+                if(this.mode==='studio') {
+                    p.classList.add('visible'); b.classList.add('active');
+                    this.selectLight(this.selLightIdx);
+                } else {
+                    p.classList.remove('visible'); b.classList.remove('active');
+                    this.lights[this.selLightIdx].helper.visible=false;
+                    new TWEEN.Tween(this.camera.position).to(this.player.pos, 1000).easing(TWEEN.Easing.Cubic.Out).start();
+                }
+            },
+            openCard(art) {
+                this.player.dest = null;
+                document.getElementById('ac-title').innerText = art.title;
+                document.getElementById('ac-desc').innerText = art.desc;
+                document.getElementById('art-card').classList.add('active');
+                this.currentArt = art;
+            },
+            closeCard() { document.getElementById('art-card').classList.remove('active'); },
+
+// IN: App object
+// REPLACE: setupUI()
+
+setupUI() {
+    const strip = document.getElementById('light-strip');
+    strip.innerHTML = ''; 
+
+    this.lights.forEach((l, i) => {
+        const d = document.createElement('div');
+        // Different style for Global vs Spot lights
+        d.className = l.type === 'spot' ? 'light-node' : 'light-node global';
+        d.innerText = l.label;
+        d.onclick = () => this.selectLight(i);
+        strip.appendChild(d);
+    });
+},
+
+// REPLACE: selectLight(idx)
+
+selectLight(idx) {
+    // Hide old helper if it was a spot
+    if(this.selLightIdx < this.lights.length) {
+        const old = this.lights[this.selLightIdx];
+        if(old.helper) old.helper.visible = false;
+    }
+    
+    this.selLightIdx = idx;
+    const l = this.lights[idx];
+    
+    // Show new helper if spot
+    if(l.helper) {
+        l.helper.visible = true;
+        // Move camera to spot view
+        const tPos = l.group.position.clone().add(new THREE.Vector3(6, 3, 6));
+        new TWEEN.Tween(this.camera.position).to(tPos, 1000).easing(TWEEN.Easing.Cubic.Out).start();
+        this.camera.lookAt(l.target.position);
+    }
+
+    // Update UI Sliders based on Type
+    this.updateUISliders(l);
+
+    // Highlight Button
+    document.querySelectorAll('.light-node').forEach((el,i) => el.classList.toggle('active', i===idx));
+},
+
+updateUISliders(l) {
+    const s = l.data; // The settings object reference
+    
+    // Intensity
+    const intensity = (s.intensity !== undefined) ? s.intensity : s.int;
+    document.getElementById('sl-int').value = intensity;
+    document.getElementById('lbl-int').innerText = intensity.toFixed(1);
+    
+    // Color (Hex to Hue approximation)
+    const colorVal = (s.color !== undefined) ? s.color : s.sky;
+    const col = new THREE.Color(colorVal);
+    const hsl = {}; col.getHSL(hsl);
+    document.getElementById('sl-col').value = hsl.h * 360;
+    
+    // Helper to toggle slider visibility
+    const show = (id, visible) => document.getElementById(id).parentElement.style.display = visible ? 'flex' : 'none';
+    
+    if (l.type === 'spot') {
+        show('sl-ang', true); document.getElementById('sl-ang').value = s.angle;
+        show('sl-pen', true); document.getElementById('sl-pen').value = s.pen;
+    } else {
+        show('sl-ang', false);
+        show('sl-pen', false);
+    }
+},
+
+// REPLACE: updateLight(prop, val)
+
+updateLight(prop, val) {
+    const l = this.lights[this.selLightIdx];
+    const s = l.data; // Modify settings object directly
+    val = parseFloat(val);
+
+    if (prop === 'intensity') {
+        if(s.int !== undefined) s.int = val; else s.intensity = val;
+        if(l.obj.intensity !== undefined) l.obj.intensity = val;
+    } 
+    else if (prop === 'color') {
+        const c = new THREE.Color().setHSL(val/360, 1, 0.6);
+        if(s.color !== undefined) s.color = c.getHex();
+        if(s.sky !== undefined) s.sky = c.getHex(); // For Hemi
+        
+        if(l.obj.color) l.obj.color.copy(c);
+        if(l.obj.skyColor) l.obj.skyColor.copy(c); // For Hemi
+        if(l.helper) l.helper.update();
+    }
+    else if (prop === 'angle') {
+        s.angle = val;
+        l.light.angle = val;
+        if(l.helper) l.helper.update();
+    }
+    else if (prop === 'penumbra') {
+        s.pen = val;
+        l.light.penumbra = val;
+        if(l.helper) l.helper.update();
+    }
+    
+    this.saveSettings(); // Auto-save on every change
+},
+
+setFov(v) { this.camera.fov = parseFloat(v); this.camera.updateProjectionMatrix(); },
+animate() {
+                requestAnimationFrame(this.animate.bind(this));
+                TWEEN.update();
+
+                // 1. UPDATE PLAYER & CAMERA (Move first, so markers attach to current frame)
+                if(this.mode === 'walk' && !this.isCinematic) {
+
+// IN: animate()
+// LOCATION: Inside if(this.mode === 'walk' && !this.isCinematic) block
+// INSERT BEFORE "if (this.player.dest)"
+
+// --- KEYBOARD MOVEMENT (WASD) ---
+if (!this.player.dest) { // Only allow keys if not auto-walking
+    const moveSpeed = 0.15;
+    const direction = new THREE.Vector3();
+    
+    // Get Camera Direction
+    const forward = new THREE.Vector3();
+    this.camera.getWorldDirection(forward);
+    forward.y = 0; forward.normalize();
+
+    const right = new THREE.Vector3();
+    right.crossVectors(forward, new THREE.Vector3(0,1,0)).normalize();
+
+    if(this.keys.w) direction.add(forward);
+    if(this.keys.s) direction.sub(forward);
+    if(this.keys.a) direction.sub(right); // Left
+    if(this.keys.d) direction.add(right); // Right
+
+    if (direction.lengthSq() > 0) {
+        direction.normalize().multiplyScalar(moveSpeed);
+        // Smoothly blend keyboard input into velocity
+        this.player.velocity.lerp(direction, 0.1);
+    }
+}                    
+                    // --- MOVEMENT PHYSICS ---
+                    if (this.player.dest) {
+                        const dist = this.player.pos.distanceTo(this.player.dest);
+                        if(dist < 1.0) {
+                            this.player.dest = null; 
+                            this.player.isWalking = false;
+                        } else {
+                            const desired = new THREE.Vector3().subVectors(this.player.dest, this.player.pos).normalize();
+                            desired.multiplyScalar(0.08); 
+                            this.player.velocity.lerp(desired, 0.05); 
+                        }
+                    } else {
+                        this.player.velocity.multiplyScalar(0.85); // Friction
+                    }
+                    
+                    const nextPos = this.player.pos.clone().add(this.player.velocity);
+                    if(!this.checkCollision(nextPos)) this.player.pos.copy(nextPos);
+
+                    // --- HEAD BOB ---
+                    const speed = this.player.velocity.length();
+                    if(speed > 0.001) {
+                        this.player.bobTimer += speed * 4.0;
+                        this.camera.position.y = this.player.headHeight + Math.sin(this.player.bobTimer) * 0.08; 
+                        const sway = Math.cos(this.player.bobTimer * 0.5) * 0.05;
+                        this.player.rot.z = sway * 0.3; 
+                    } else {
+                        this.player.bobTimer += 0.03;
+                        this.camera.position.y = this.player.headHeight + Math.sin(this.player.bobTimer) * 0.015;
+                        this.player.rot.z = THREE.MathUtils.lerp(this.player.rot.z, 0, 0.1);
+                    }
+
+                    this.camera.position.x = this.player.pos.x;
+                    this.camera.position.z = this.player.pos.z;
+
+                    // --- AUTOMATIC GAZE (Human Look) ---
+                    if(!this.input.active) {
+                        let nearestArt = null;
+                        let minD = 100; // FIX: Start with a high number, not 0
+                        
+                        this.arts.forEach(a => {
+                            const d = this.player.pos.distanceTo(a.pos);
+                            // Only look at art in front of us (Dot > 0)
+                            const vTo = a.pos.clone().sub(this.player.pos).normalize();
+                            const cDir = new THREE.Vector3(); 
+                            this.camera.getWorldDirection(cDir);
+                            
+                            if(d < minD && cDir.dot(vTo) > 0.2) { 
+                                minD = d; nearestArt = a; 
+                            }
+                        });
+
+                        if(nearestArt) {
+                            // Look slightly above center of art
+                            const lookTarget = nearestArt.pos.clone().add(new THREE.Vector3(0, 1, 0));
+                            const currentDir = new THREE.Vector3();
+                            this.camera.getWorldDirection(currentDir);
+                            const targetDir = new THREE.Vector3().subVectors(lookTarget, this.camera.position).normalize();
+                            
+                            // Blend: 90% Walk Direction, 10% Art Interest
+                            const walkDir = this.player.velocity.clone().normalize();
+                            if(this.player.velocity.length() < 0.01) walkDir.copy(currentDir);
+                            
+                            const blendDir = new THREE.Vector3().addVectors(walkDir.multiplyScalar(0.9), targetDir.multiplyScalar(0.1)).normalize();
+                            const targetRot = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,-1), blendDir), 'YXZ');
+                            
+                            // Smooth look
+                            this.player.rot.y += (targetRot.y - this.player.rot.y) * 0.02;
+                            this.player.rot.x += (targetRot.x - this.player.rot.x) * 0.02;
+                        }
+                    }
+                    this.camera.rotation.copy(this.player.rot);
+                } else {
+                    this.lights.forEach(l => this.updateLightRig(l));
+                }
+
+
+                // IN: animate() - Bottom section
+                // 2. UPDATE MARKERS
+                this.camera.updateMatrixWorld(); 
+                this.arts.forEach(a => {
+                    // Distance check
+                    const d = this.player.pos.distanceTo(a.pos);
+                    
+                    // Direction check
+                    const vTo = a.pos.clone().sub(this.player.pos).normalize();
+                    const cDir = new THREE.Vector3(); 
+                    this.camera.getWorldDirection(cDir);
+                    
+                    // Project to screen
+                    const p = a.viewPos.clone().project(this.camera);
+
+                    // LOGIC FIX:
+                    // 1. d < 50: Show within 50 meters
+                    // 2. dot > 0.15: Show if within ~160 degrees of view (Peripheral vision)
+                    // 3. p.z < 1: STRICTLY ensure it is not behind the camera (WebGL clipping space)
+                    if(d < 50 && cDir.dot(vTo) > 0.15 && p.z < 1) {
+                        const x = (p.x * 0.5 + 0.5) * window.innerWidth;
+                        const y = (-(p.y * 0.5) + 0.5) * window.innerHeight;
+                        
+                        // Instant transform update (No CSS transition lag)
+                        a.el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) scale(1)`;
+                        a.el.style.opacity = 1;
+                    } else {
+                        a.el.style.transform = `translate(-50%, -50%) scale(0)`;
+                        a.el.style.opacity = 0;
+                    }
+                });
+
+                this.renderer.render(this.scene, this.camera);
+            }
+        };
+        window.onload = () => App.init();
+        window.onresize = () => {
+            App.camera.aspect = window.innerWidth/window.innerHeight;
+            App.camera.updateProjectionMatrix();
+            App.renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+    </script>
+</body>
+</html>

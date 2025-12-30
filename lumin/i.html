@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Luminarium: Gen-Z Edition</title>
+    <style>
+        /* --- MODERN MINIMALIST THEME --- */
+        :root { 
+            --gold: #d4af37; 
+            --glass: rgba(255, 255, 255, 0.05); 
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --blur: blur(40px);
+            --font-main: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            --text-primary: #ffffff;
+            --text-secondary: #aaaaaa;
+        }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #050505; font-family: var(--font-main); touch-action: none; }
+        
+        canvas { display: block; width: 100vw; height: 100vh; outline: none; cursor: crosshair; }
+        
+        /* --- LAYERS --- */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; z-index: 20; }
+        #marker-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        
+        /* --- HUD --- */
+        .hud-top { 
+            position: absolute; top: 0; left: 0; width: 100%; padding: 24px; 
+            display: flex; justify-content: space-between; pointer-events: auto; 
+        }
+        
+        .btn-icon {
+            width: 48px; height: 48px; border-radius: 50%; 
+            background: rgba(20, 20, 20, 0.4); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+            border: 1px solid var(--glass-border); color: #fff; font-size: 18px; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-icon:hover { transform: scale(1.05); background: rgba(255,255,255,0.1); }
+        .btn-icon:active { transform: scale(0.95); }
+        .btn-icon.active { border-color: var(--gold); color: var(--gold); background: rgba(212,175,55,0.1); }
+
+        /* Focal Slider */
+        .focal-slider-container {
+            position: absolute; right: 24px; top: 50%; transform: translateY(-50%);
+            height: 220px; width: 48px; 
+            background: rgba(20, 20, 20, 0.4); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+            border-radius: 30px; border: 1px solid var(--glass-border); 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            pointer-events: auto; transition: opacity 0.3s;
+        }
+        input[type=range].vertical {
+            writing-mode: bt-lr; -webkit-appearance: slider-vertical;
+            width: 4px; height: 140px; background: rgba(255,255,255,0.2); opacity: 0.8; margin-top: 12px; accent-color: var(--gold);
+        }
+
+        /* --- MARKERS --- */
+        .art-marker {
+            position: absolute; width: 0; height: 0; pointer-events: auto;
+            transform: translate(-50%, -50%); transition: opacity 0.4s ease;
+        }
+        .marker-btn {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255,255,255,0.4);
+            backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .marker-btn:hover { transform: scale(1.3); background: rgba(255,255,255,0.3); }
+        .marker-dot { width: 6px; height: 6px; background: #fff; border-radius: 50%; box-shadow: 0 0 10px rgba(255,255,255,0.8); }
+        
+        .marker-stats {
+            position: absolute; top: 36px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none;
+            transform: translateX(-50%) translateY(-5px);
+        }
+        .art-marker:hover .marker-stats, .art-marker.seen .marker-stats { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .seen-badge {
+            background: #fff; color: #000; font-size: 10px; font-weight: 700;
+            padding: 2px 6px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        /* --- ART CARD --- */
+        .art-card {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(100px);
+            width: 90%; max-width: 400px; max-height: 65vh;
+            background: rgba(10, 10, 10, 0.8);
+            border: 1px solid rgba(255,255,255,0.08); border-radius: 32px;
+            backdrop-filter: blur(50px) saturate(120%); -webkit-backdrop-filter: blur(50px) saturate(120%);
+            opacity: 0; visibility: hidden; transition: 0.6s cubic-bezier(0.19, 1, 0.22, 1); 
+            pointer-events: auto; display: flex; flex-direction: column;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.5); overflow: hidden;
+        }
+        .art-card.active { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+        
+        .card-scroll { padding: 32px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .card-scroll::-webkit-scrollbar { width: 0; }
+        .card-header { margin-bottom: 24px; }
+        .card-title { margin: 0; color: var(--text-primary); font-size: 28px; font-weight: 300; letter-spacing: -0.03em; line-height: 1.1; }
+        .card-subtitle { color: var(--gold); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-top: 8px; font-weight: 600; opacity: 0.8; }
+        .info-text { color: var(--text-secondary); font-size: 14px; line-height: 1.6; font-weight: 400; }
+        
+        .card-actions { 
+            padding: 20px 24px; border-top: 1px solid rgba(255,255,255,0.05);
+            display: flex; gap: 12px; background: rgba(0,0,0,0.2);
+        }
+        .btn-primary { 
+            flex: 2; padding: 16px; background: #fff; border: none; border-radius: 16px; 
+            font-weight: 700; font-size: 13px; color: #000; letter-spacing: 0.5px; cursor: pointer; 
+            text-transform: uppercase; transition: 0.2s;
+        }
+        .btn-primary:hover { background: #f0f0f0; transform: translateY(-1px); }
+        .btn-close { 
+            flex: 1; background: rgba(255,255,255,0.05); border: none; color: #fff;
+            border-radius: 16px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s;
+        }
+        .btn-close:hover { background: rgba(255,255,255,0.1); }
+
+        #loading { position: absolute; top:0; left:0; width:100%; height:100%; background:#050505; color:var(--gold); display:flex; align-items:center; justify-content:center; letter-spacing:4px; font-size:11px; font-weight: 700; z-index:999; transition: opacity 0.8s; }
+        .ripple { position: absolute; border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; pointer-events: none; animation: rip 0.8s ease-out forwards; transform: translate(-50%, -50%); }
+        @keyframes rip { 0% { width:0; height:0; opacity:1; } 100% { width:120px; height:120px; opacity:0; } }
+    </style>
+</head>
+<body>
+
+    <div id="loading">OPTIMIZING PERSPECTIVE...</div>
+
+    <canvas id="gl-canvas"></canvas>
+    <div id="marker-layer"></div>
+
+    <div id="ui-layer">
+        <div class="hud-top">
+            <div class="btn-icon" id="btn-mode" onclick="App.toggleMode()">🛠️</div>
+        </div>
+
+        <div class="focal-slider-container">
+            <span style="font-size:14px; color:#fff; opacity:0.6; margin-bottom:10px">🔭</span>
+            <input type="range" class="vertical" min="20" max="90" value="60" oninput="App.setFov(this.value)">
+        </div>
+
+        <div class="art-card" id="art-card">
+            <div class="card-scroll">
+                <div class="card-header">
+                    <h2 class="card-title" id="ac-title">Title</h2>
+                    <div class="card-subtitle">Procedural Art • 2025</div>
+                </div>
+                <p class="info-text" id="ac-desc">Description.</p>
+            </div>
+            <div class="card-actions">
+                <button class="btn-close" onclick="App.closeCard()">CLOSE</button>
+                <button class="btn-primary" onclick="App.gotoNextArt()">VISIT NEXT ➜</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+    <script>
+        const App = {
+            scene: null, camera: null, renderer: null,
+            mode: 'walk',
+            arts: [], colliders: [],
+            clock: new THREE.Clock(),
+            raycaster: new THREE.Raycaster(), mouse: new THREE.Vector2(),
+            
+            player: {
+                pos: new THREE.Vector3(0, 0, 10),
+                rot: new THREE.Quaternion(),
+                targetRot: new THREE.Quaternion(),
+                headHeight: 1.7,
+                isWalking: false,
+                isRunning: false,
+                dest: null,
+                lookTarget: null,
+                bobPhase: 0,
+                smoothPos: new THREE.Vector3(0, 0, 10),
+                pitch: 0
+            },
+            
+            input: { active: false, lastX: 0, lastY: 0 },
+            visits: {},
+
+            init() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x050505);
+                this.scene.fog = new THREE.FogExp2(0x050505, 0.015);
+
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+                this.renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gl-canvas'), antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                
+                this.buildWorld();
+                this.setupInputs();
+                
+                this.player.targetRot.copy(this.player.rot);
+
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+
+                requestAnimationFrame(this.animate.bind(this));
+                setTimeout(() => {
+                    document.getElementById('loading').style.opacity = 0;
+                    setTimeout(()=>document.getElementById('loading').remove(), 800);
+                }, 1000);
+            },
+            checkCollision(newPos) {
+                const pBox = new THREE.Box3().setFromCenterAndSize(newPos, new THREE.Vector3(0.5, 2, 0.5));
+                for(let b of this.colliders) {
+                    if(pBox.intersectsBox(b)) return true;
+                }
+                return false;
+            },
+
+            buildWorld() {
+                // Lights
+                const amb = new THREE.HemisphereLight(0xffffff, 0x080808, 2);
+                this.scene.add(amb);
+
+                // Floor
+                const floor = new THREE.Mesh(
+                    new THREE.PlaneGeometry(80, 80),
+                    new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 })
+                );
+                floor.rotation.x = -Math.PI/2;
+                floor.receiveShadow = true;
+                this.scene.add(floor);
+                this.floor = floor;
+
+                // Walls
+                const wallMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+                const addWall = (w, h, d, x, z, ry) => {
+                    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+                    m.position.set(x, h/2, z);
+                    m.rotation.y = ry;
+                    this.scene.add(m);
+                    this.colliders.push(new THREE.Box3().setFromObject(m));
+                };
+                addWall(50, 8, 1, 0, -20, 0); 
+                addWall(50, 8, 1, 0, 20, 0); 
+                addWall(40, 8, 1, -25, 0, Math.PI/2); 
+                addWall(40, 8, 1, 25, 0, Math.PI/2);
+
+                // Art Setup
+                const locs = [
+                    { x: -10, z: -19.4, ry: 0, title: "Cyber Glitch" },
+                    { x: 10, z: -19.4, ry: 0, title: "Neon Pulse" },
+                    { x: 24.4, z: -10, ry: -Math.PI/2, title: "Static Void" },
+                    { x: -24.4, z: 10, ry: Math.PI/2, title: "Echo Chamber" }
+                ];
+
+                locs.forEach((loc, i) => {
+                    const g = new THREE.Group();
+                    g.position.set(loc.x, 3.5, loc.z);
+                    g.rotation.y = loc.ry;
+                    
+                    const frame = new THREE.Mesh(new THREE.BoxGeometry(3.2, 4.2, 0.1), new THREE.MeshStandardMaterial({color: 0x000}));
+                    const art = new THREE.Mesh(new THREE.PlaneGeometry(3, 4), new THREE.MeshBasicMaterial({color: new THREE.Color().setHSL(Math.random(), 0.7, 0.5)}));
+                    art.position.z = 0.06;
+                    g.add(frame, art);
+                    this.scene.add(g);
+
+                    const spot = new THREE.SpotLight(0xffffff, 1.5, 20, 0.6, 0.5);
+                    spot.position.set(loc.x, 7, loc.z + (loc.z < 0 ? 5 : -5));
+                    spot.target = g;
+                    this.scene.add(spot);
+
+                    // Calculation for the perfect "Gallery Viewpoint"
+                    // Normal vector of the painting
+                    const normal = new THREE.Vector3(0, 0, 1).applyEuler(g.rotation);
+                    const viewPos = g.position.clone().add(normal.multiplyScalar(5));
+                    viewPos.y = 0; // Ground level
+
+                    // Rotation to face the wall perfectly
+                    const viewRot = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), loc.ry + Math.PI);
+
+                    const artData = {
+                        id: i, title: loc.title, desc: "A curated piece exploring the limits of procedural geometry.",
+                        pos: g.position.clone(),
+                        viewPos: viewPos,
+                        viewRot: viewRot,
+                        marker: null
+                    };
+
+                    this.arts.push(artData);
+
+                    const m = document.createElement('div');
+                    m.className = 'art-marker';
+                    m.innerHTML = `<div class="marker-btn"><div class="marker-dot"></div></div>`;
+                    m.onclick = (e) => { e.stopPropagation(); this.visitArt(artData); };
+                    document.getElementById('marker-layer').appendChild(m);
+                    artData.marker = m;
+                });
+            },
+setFov(v) {
+    camera.fov = parseFloat(v);
+    camera.updateProjectionMatrix();
+}, toggleMode() {
+    mode = mode === 'walk' ? 'studio' : 'walk';
+    const panel = document.getElementById('studio-panel');
+    const btn = document.getElementById('btn-mode');
+
+    if(mode === 'studio') {
+        panel.classList.add('visible');
+        btn.classList.add('active');
+        selectLight(0);
+    } else {
+        panel.classList.remove('visible');
+        btn.classList.remove('active');
+        lights[selLightIdx].helper.visible = false;
+    }
+}, selectLight(i) {
+    lights[selLightIdx].helper.visible = false;
+    selLightIdx = i;
+    const l = lights[i];
+    l.helper.visible = true;
+
+    cameraLocked = true;
+
+    const pL = l.group.position.clone();
+    const pT = l.target.position.clone();
+    const lightDir = new THREE.Vector3().subVectors(pT, pL).normalize();
+
+    const camPos = pL.clone()
+        .add(lightDir.clone().multiplyScalar(-8))
+        .add(new THREE.Vector3(0, 2, 0));
+
+    const focus = pL.clone().lerp(pT, 0.6);
+
+    const m = new THREE.Matrix4().lookAt(camPos, focus, new THREE.Vector3(0,1,0));
+    const targetQuat = new THREE.Quaternion().setFromRotationMatrix(m);
+    const startQuat = camera.quaternion.clone();
+
+    // Tween position
+    new TWEEN.Tween(camera.position)
+        .to(camPos, 900)
+        .easing(TWEEN.Easing.Quadratic.Out)
+        .start();
+
+    // Tween rotation
+    const qObj = { t: 0 };
+    new TWEEN.Tween(qObj)
+        .to({ t: 1 }, 900)
+        .easing(TWEEN.Easing.Quadratic.Out)
+        .onUpdate(() => {
+            camera.quaternion.slerpQuaternions(startQuat, targetQuat, qObj.t);
+        })
+        .onComplete(() => {
+            cameraLocked = false;
+        })
+        .start();
+
+    document.querySelectorAll('.light-node').forEach((n, idx) => 
+        n.classList.toggle('active', idx === i)
+    );
+
+    document.getElementById('sl-int').value = l.light.intensity;
+    document.getElementById('sl-col').value = l.light.userData.hue;
+    document.getElementById('sl-sat').value = l.light.userData.sat;
+    document.getElementById('cb-white').checked = l.light.userData.white;
+    document.getElementById('sl-x').value = l.group.position.x;
+    document.getElementById('sl-z').value = l.group.position.z;
+},openCard(art) {
+    player.dest = null;
+    currentArt = art;
+    lastInteractTime = Date.now();
+
+    visits[art.id] = (visits[art.id] || 0) + 1;
+    localStorage.setItem('luminarium_visits', JSON.stringify(visits));
+
+    art.marker.innerHTML = `
+        <div class="marker-btn"><div class="marker-dot"></div></div>
+        <div class="marker-stats">
+            <span class="seen-badge">${visits[art.id]}</span>
+            <span class="eye-icon">👁️</span>
+        </div>
+    `;
+
+    document.getElementById('ac-title').innerText = art.title;
+    document.getElementById('ac-desc').innerText = art.desc;
+    document.getElementById('art-card').classList.add('active');
+},
+            setupInputs() {
+                const c = this.renderer.domElement;
+                const start = (x, y) => {
+                    this.input.active = true;
+                    this.input.lastX = x;
+                    this.input.lastY = y;
+                    this.player.lookTarget = null; // Break auto-focus on manual look
+                };
+                const move = (x, y) => {
+                    if(!this.input.active) return;
+                    const dx = x - this.input.lastX;
+                    const dy = y - this.input.lastY;
+                    
+                    const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), -dx * 0.003);
+                    this.player.targetRot.multiplyQuaternions(qYaw, this.player.targetRot);
+                    this.player.headYaw = (this.player.headYaw || 0) - dx * 0.003;
+                    this.player.pitch = Math.max(-1.4, Math.min(1.4, this.player.pitch - dy * 0.003));
+
+                    this.input.lastX = x;
+                    this.input.lastY = y;
+                };
+                const end = () => {
+                    if(!this.input.active) return;
+                    this.input.active = false;
+                };
+
+                c.addEventListener('mousedown', e => start(e.clientX, e.clientY));
+                window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+                window.addEventListener('mouseup', end);
+                c.addEventListener('touchstart', e => start(e.touches[0].clientX, e.touches[0].clientY));
+                c.addEventListener('touchmove', e => move(e.touches[0].clientX, e.touches[0].clientY));
+                c.addEventListener('touchend', end);
+
+                c.addEventListener('click', (e) => {
+                    if(Date.now() - this.input.tapTime > 200) return;
+                    this.mouse.x = (e.clientX/window.innerWidth)*2-1;
+                    this.mouse.y = -(e.clientY/window.innerHeight)*2+1;
+                    this.raycaster.setFromCamera(this.mouse, this.camera);
+                    const hit = this.raycaster.intersectObject(this.floor);
+                    if(hit.length > 0) this.walkTo(hit[0].point);
+                });
+            },
+
+            walkTo(pt) {
+                this.player.dest = pt.clone();
+                this.player.isWalking = true;
+                this.player.lookTarget = null;
+            },
+
+            visitArt(art) {
+                this.player.dest = art.viewPos.clone();
+                this.player.lookTarget = art.viewRot.clone();
+                this.player.isWalking = true;
+
+                document.getElementById('ac-title').innerText = art.title;
+                document.getElementById('ac-desc').innerText = art.desc;
+                document.getElementById('art-card').classList.add('active');
+            },
+
+            closeCard() {
+                document.getElementById('art-card').classList.remove('active');
+            },
+
+            gotoNextArt() {
+                const currentTitle = document.getElementById('ac-title').innerText;
+                const idx = this.arts.findIndex(a => a.title === currentTitle);
+                const next = this.arts[(idx + 1) % this.arts.length];
+                this.visitArt(next);
+            },
+
+            setFov(v) {
+                this.camera.fov = v;
+                this.camera.updateProjectionMatrix();
+            },
+
+
+            
+
+animate() {
+    requestAnimationFrame(this.animate.bind(this));
+    const dt = Math.min(this.clock.getDelta(), 0.1);
+    TWEEN.update();
+
+    if(this.player.isWalking && this.player.dest) {
+        // Direction vector to destination
+        const dir = new THREE.Vector3().subVectors(this.player.dest, this.player.pos);
+        dir.y = 0; // Keep horizontal
+        const dist = dir.length();
+
+        // Desired stop distance
+        const stopDist = 1.5;
+
+        if(dist < stopDist) {
+            this.player.isWalking = false;
+            // Snap player at stop distance from target
+            const back = dir.clone().normalize().multiplyScalar(stopDist);
+            this.player.pos.copy(this.player.dest.clone().sub(back));
+
+
+        } else {
+            // Move toward target
+            const step = Math.min(4 * dt, dist);
+            const nextPos = this.player.pos.clone().add(dir.clone().normalize().multiplyScalar(step));
+            if(!App.checkCollision(nextPos)) this.player.pos.copy(nextPos);
+            this.player.bobPhase += dt * 10;
+
+            // Smoothly rotate toward target
+            const targetPos = this.player.dest.clone();
+            targetPos.y = this.player.pos.y; // Keep player horizontal
+
+            // Compute quaternion looking from -Z forward vector
+            const m = new THREE.Matrix4().lookAt(this.player.pos, targetPos, new THREE.Vector3(0,1,0));
+            const lookQuat = new THREE.Quaternion().setFromRotationMatrix(m);
+            this.player.rot.slerp(lookQuat, 0.05);
+        }
+    }
+
+    // Camera smoothing & bob
+    this.player.smoothPos.lerp(this.player.pos, 0.1);
+    const bob = Math.sin(this.player.bobPhase) * 0.025;
+
+    this.camera.position.copy(this.player.smoothPos);
+    this.camera.position.y = this.player.headHeight + bob;
+
+// Convert body rotation to Euler
+const bodyEuler = new THREE.Euler().setFromQuaternion(this.player.rot, 'YXZ');
+// Compose camera rotation: body + head
+this.camera.rotation.set(
+    bodyEuler.x + (this.player.pitch || 0),    // pitch
+    bodyEuler.y + (this.player.headYaw || 0),  // yaw (from mouse/touch)
+    bodyEuler.z,
+    'YXZ'
+);
+
+    // UI Markers
+    this.arts.forEach(a => {
+        const p = a.pos.clone().project(this.camera);
+        const visible = p.z < 1 && Math.abs(p.x) < 0.9 && Math.abs(p.y) < 0.9;
+        a.marker.style.opacity = visible ? 1 : 0;
+        if(visible) {
+            a.marker.style.left = (p.x * 0.5 + 0.5) * 100 + '%';
+            a.marker.style.top = (-p.y * 0.5 + 0.5) * 100 + '%';
+        }
+    });
+
+    this.renderer.render(this.scene, this.camera);
+}
+
+};
+
+        window.onload = () => App.init();
+    </script>
+</body>
+</html>

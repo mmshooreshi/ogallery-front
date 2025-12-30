@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Luminarium: Luxe Edition</title>
+    <style>
+        /* --- LUXURY THEME --- */
+        :root { 
+            --gold: #d4af37; 
+            --gold-dim: #8a701e;
+            --accent: #ff4d4d;
+            --glass: rgba(18, 18, 24, 0.75); 
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --blur: blur(24px);
+            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #0a0a0f; font-family: var(--font-main); touch-action: none; }
+        
+        canvas { display: block; width: 100vw; height: 100vh; outline: none; }
+        
+        /* --- UI LAYOUT --- */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+        #marker-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        
+        /* --- HUD --- */
+        .hud-top { 
+            position: absolute; top: 0; left: 0; width: 100%; padding: 20px; 
+            display: flex; justify-content: space-between; pointer-events: auto; 
+            background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+        }
+        
+        .btn-icon {
+            width: 48px; height: 48px; border-radius: 50%; 
+            background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+            border: 1px solid var(--glass-border); color: #e0e0e0; font-size: 20px; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+        .btn-icon:active { transform: scale(0.92); }
+        .btn-icon.active { border-color: var(--gold); color: var(--gold); background: rgba(212, 175, 55, 0.15); }
+        
+        .focal-slider-container {
+            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+            height: 220px; width: 44px; 
+            background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+            border-radius: 30px; border: 1px solid var(--glass-border); 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            pointer-events: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        input[type=range].vertical {
+            writing-mode: bt-lr; -webkit-appearance: slider-vertical;
+            width: 6px; height: 160px; background: rgba(255,255,255,0.15); opacity: 0.8; margin-top: 10px;
+        }
+
+        #studio-panel {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: rgba(12, 12, 18, 0.9); 
+            backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            border-top: 1px solid rgba(255,255,255,0.15);
+            transform: translateY(110%); transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+            pointer-events: auto; padding-bottom: max(20px, env(safe-area-inset-bottom));
+            display: flex; flex-direction: column;
+            box-shadow: 0 -20px 50px rgba(0,0,0,0.6);
+        }
+        #studio-panel.visible { transform: translateY(0); }
+        
+        .studio-header { padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; }
+        .studio-title { font-size: 12px; font-weight: 700; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; }
+        
+        .light-strip { display: flex; gap: 12px; padding: 0 25px 20px; overflow-x: auto; scrollbar-width: none; }
+        .light-node {
+            min-width: 50px; height: 50px; background: rgba(255,255,255,0.05); 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; 
+            color: #888; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 16px; transition: 0.3s;
+        }
+        .light-node.active { 
+            border-color: var(--gold); color: #fff; background: linear-gradient(135deg, rgba(212,175,55,0.3), transparent);
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2); transform: translateY(-2px);
+        }
+
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 30px; padding: 0 25px 10px; }
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        .label-row { display: flex; justify-content: space-between; font-size: 10px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+        
+        input[type=range].h-slider { width: 100%; -webkit-appearance: none; background: transparent; margin: 0; }
+        input[type=range].h-slider::-webkit-slider-track { height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; }
+        input[type=range].h-slider::-webkit-slider-thumb { 
+            -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: #fff; 
+            margin-top: -7.5px; box-shadow: 0 2px 12px rgba(0,0,0,0.6); transition: 0.2s;
+        }
+
+        .art-marker {
+            position: absolute; width: 44px; height: 44px; 
+            background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; pointer-events: auto;
+            transform: translate(-50%, -50%) scale(0); transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            z-index: 100; box-shadow: 0 4px 25px rgba(0,0,0,0.5);
+        }
+        .art-marker.visible { transform: translate(-50%, -50%) scale(1); }
+        .marker-dot { width: 10px; height: 10px; background: #fff; border-radius: 50%; box-shadow: 0 0 15px #fff; }
+
+        .art-card {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(40px);
+            width: 85%; max-width: 420px; 
+            background: rgba(25, 25, 35, 0.85);
+            border: 1px solid rgba(255,255,255,0.15); border-radius: 32px; padding: 35px;
+            backdrop-filter: blur(40px) saturate(160%); -webkit-backdrop-filter: blur(40px) saturate(160%);
+            opacity: 0; visibility: hidden; transition: 0.7s cubic-bezier(0.19, 1, 0.22, 1); pointer-events: auto;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.7);
+        }
+        .art-card.active { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+        .art-card h2 { margin: 0 0 10px 0; color: #fff; font-size: 26px; font-weight: 300; letter-spacing: -0.5px; }
+        .art-card p { margin: 0 0 30px 0; color: #ccc; font-size: 15px; line-height: 1.6; }
+        
+        .btn-primary { 
+            width: 100%; padding: 16px; background: #fff; border: none; border-radius: 18px; 
+            font-weight: 700; font-size: 14px; color: #000; letter-spacing: 0.5px; cursor: pointer; 
+            transition: 0.3s; text-transform: uppercase;
+        }
+        .btn-primary:active { transform: scale(0.96); background: var(--gold); }
+        
+        .ripple {
+            position: absolute; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6);
+            transform: translate(-50%, -50%); pointer-events: none;
+            animation: rip-anim 1s ease-out forwards;
+        }
+        @keyframes rip-anim { 0% { width: 0; height: 0; opacity: 1; } 100% { width: 180px; height: 180px; opacity: 0; } }
+        
+        #loading { position: absolute; top:0; left:0; width:100%; height:100%; background:#050508; color:var(--gold); display:flex; align-items:center; justify-content:center; letter-spacing:6px; font-size: 14px; font-weight: 700; z-index:9999; transition: opacity 1s; }
+    </style>
+</head>
+<body>
+    <div id="loading">CURATING EXPERIENCE...</div>
+    <canvas id="gl-canvas"></canvas>
+    <div id="marker-layer"></div>
+    <div id="ui-layer">
+        <div class="hud-top">
+            <div class="btn-icon" id="btn-mode" onclick="App.toggleMode()">🛠️</div>
+            <div class="btn-icon" id="btn-undo" onclick="App.undo()" style="opacity:0.5">↺</div>
+        </div>
+        <div class="focal-slider-container">
+            <span style="font-size:16px; color:#fff; margin-bottom:12px;">🔭</span>
+            <input type="range" class="vertical" min="20" max="120" value="60" oninput="App.setFov(this.value)">
+        </div>
+        <div class="art-card" id="art-card">
+            <h2 id="ac-title">Art Title</h2>
+            <p id="ac-desc">Description goes here.</p>
+            <button class="btn-primary" onclick="App.gotoNextArt()">Journey to Next</button>
+            <button class="btn-close" onclick="App.closeCard()" style="background:none; border:none; color:rgba(255,255,255,0.4); width:100%; margin-top:20px; cursor:pointer;">Close</button>
+        </div>
+        <div id="studio-panel">
+            <div class="studio-header"><span class="studio-title">Atmospheric Designer</span></div>
+            <div class="light-strip" id="light-strip"></div>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <div class="label-row"><span>Intensity</span><span id="lbl-int">1.0</span></div>
+                    <input type="range" class="h-slider" min="0" max="10" step="0.1" id="sl-int" oninput="App.updateLight('intensity', this.value)">
+                </div>
+                <div class="control-group">
+                    <div class="label-row"><span>Hue</span><span id="lbl-col">Atmosphere</span></div>
+                    <input type="range" class="h-slider" min="0" max="360" step="1" id="sl-col" oninput="App.updateLight('color', this.value)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <script>
+        class HistoryStack {
+            constructor() { this.stack = []; }
+            push(state) {
+                if(this.stack.length > 20) this.stack.shift();
+                this.stack.push(state);
+                document.getElementById('btn-undo').style.opacity = 1;
+            }
+            pop() { return this.stack.pop(); }
+        }
+
+        const App = {
+            scene: null, camera: null, renderer: null,
+            mode: 'walk',
+            lights: [], arts: [], colliders: [], atmosphereLights: [],
+            selLightIdx: 0,
+            history: new HistoryStack(),
+            textureLoader: new THREE.TextureLoader(),
+            raycaster: new THREE.Raycaster(),
+            mouse: new THREE.Vector2(),
+            
+            player: {
+                pos: new THREE.Vector3(0, 2.0, 14),
+                rot: new THREE.Euler(0, 0, 0, 'YXZ'),
+                dest: null,
+                isWalking: false,
+                headHeight: 2.0,
+                bobTimer: 0,
+                radius: 1.2, // Safety padding for collisions
+            },
+            input: { active: false, startX: 0, startY: 0, lastX: 0, lastY: 0, tapTime: 0 },
+
+            init() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0a0a0f);
+                this.scene.fog = new THREE.FogExp2(0x0a0a0f, 0.035);
+
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 150);
+                
+                this.renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gl-canvas'), antialias: true, powerPreference: "high-performance" });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                this.renderer.outputEncoding = THREE.sRGBEncoding;
+
+                this.buildWorld();
+                this.setupAtmosphere();
+                this.setupInputs();
+                this.setupUI();
+                
+                requestAnimationFrame(this.animate.bind(this));
+                setTimeout(() => { document.getElementById('loading').style.opacity = 0; setTimeout(() => document.getElementById('loading').remove(), 1000); }, 2000);
+            },
+
+            buildWorld() {
+                const floorMat = new THREE.MeshPhysicalMaterial({ color: 0x111115, roughness: 0.05, metalness: 0.5, clearcoat: 1.0 });
+                const wallMat = new THREE.MeshStandardMaterial({ color: 0x1a1a20, roughness: 0.8 });
+
+                const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), floorMat);
+                floor.rotation.x = -Math.PI/2;
+                floor.receiveShadow = true;
+                this.scene.add(floor);
+                this.floor = floor;
+
+                const createWall = (x, z, ry, w) => {
+                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, 10, 1), wallMat);
+                    mesh.position.set(x, 5, z);
+                    mesh.rotation.y = ry;
+                    mesh.castShadow = true; mesh.receiveShadow = true;
+                    this.scene.add(mesh);
+                    this.colliders.push(new THREE.Box3().setFromObject(mesh));
+                };
+
+                createWall(0, -20, 0, 50);  // Back
+                createWall(-25, 0, Math.PI/2, 40); // Left
+                createWall(25, 0, Math.PI/2, 40);  // Right
+                createWall(0, 20, 0, 50);   // Front
+
+                const createArt = (pos, ry, url, title, desc) => {
+                    const group = new THREE.Group();
+                    group.position.copy(pos);
+                    group.rotation.y = ry;
+
+                    const frame = new THREE.Mesh(new THREE.BoxGeometry(4.5, 6, 0.3), new THREE.MeshStandardMaterial({color: 0x050505}));
+                    const texture = this.textureLoader.load(url);
+                    texture.encoding = THREE.sRGBEncoding;
+                    const canvas = new THREE.Mesh(new THREE.PlaneGeometry(4, 5.5), new THREE.MeshStandardMaterial({map: texture, roughness: 0.2}));
+                    canvas.position.z = 0.16;
+                    
+                    group.add(frame, canvas);
+                    this.scene.add(group);
+
+                    this.arts.push({ id: this.arts.length, pos, ry, title, desc, el: null });
+                };
+
+                createArt(new THREE.Vector3(0, 4.5, -19.4), 0, 'assets/7.jpg', "Ethereal Echoes", "A visual symphony of color and light.");
+                createArt(new THREE.Vector3(-12, 4.5, -19.4), 0, 'assets/8.jpg', "Stellar Path", "Navigation through the cosmic unknown.");
+                createArt(new THREE.Vector3(12, 4.5, -19.4), 0, 'assets/9.jpg', "Digital Pulse", "The rhythm of the machine world.");
+                createArt(new THREE.Vector3(-24.4, 4.5, 0), Math.PI/2, 'assets/10.jpg', "Abstract Horizon", "Where reality meets the imagined.");
+                createArt(new THREE.Vector3(24.4, 4.5, 0), -Math.PI/2, 'assets/5.jpg', "Deep Spectrum", "Intense exploration of chromatic depth.");
+
+                const layer = document.getElementById('marker-layer');
+                this.arts.forEach(a => {
+                    const el = document.createElement('div');
+                    el.className = 'art-marker';
+                    el.innerHTML = '<div class="marker-dot"></div>';
+                    el.onclick = (e) => { e.stopPropagation(); this.openArt(a); };
+                    layer.appendChild(el);
+                    a.el = el;
+                });
+            },
+
+            setupAtmosphere() {
+                // High-intensity ambient base to prevent darkness
+                this.scene.add(new THREE.AmbientLight(0x4040ff, 0.5));
+                this.scene.add(new THREE.HemisphereLight(0xffffff, 0x000000, 0.6));
+
+                const createMorphLight = (color, pos) => {
+                    const pLight = new THREE.PointLight(color, 8, 40);
+                    pLight.position.copy(pos);
+                    this.scene.add(pLight);
+                    this.atmosphereLights.push({ 
+                        light: pLight, 
+                        basePos: pos.clone(), 
+                        offset: Math.random() * 10 
+                    });
+                };
+
+                // Strategic Morphing Layers (Purple/Blue)
+                createMorphLight(0x8800ff, new THREE.Vector3(-15, 8, -10));
+                createMorphLight(0x0088ff, new THREE.Vector3(15, 8, 10));
+                createMorphLight(0x4400aa, new THREE.Vector3(0, 9, 0));
+
+                // Art Focused Spotlights
+                this.arts.forEach((a, i) => {
+                    const spot = new THREE.SpotLight(0xffffff, 6);
+                    const offset = new THREE.Vector3(0, 8, 8).applyAxisAngle(new THREE.Vector3(0,1,0), a.ry);
+                    spot.position.copy(a.pos).add(offset);
+                    spot.target.position.copy(a.pos);
+                    spot.angle = 0.65;
+                    spot.penumbra = 0.8;
+                    spot.decay = 2;
+                    spot.distance = 40;
+                    spot.castShadow = true;
+                    this.scene.add(spot);
+                    this.scene.add(spot.target);
+                    this.lights.push(spot);
+                });
+            },
+
+            setupInputs() {
+                const cvs = this.renderer.domElement;
+                cvs.addEventListener('touchstart', e => {
+                    e.preventDefault();
+                    const t = e.touches[0];
+                    this.input.startX = t.clientX; this.input.startY = t.clientY;
+                    this.input.lastX = t.clientX; this.input.lastY = t.clientY;
+                    this.input.tapTime = Date.now();
+                    this.input.active = true;
+                }, {passive:false});
+
+                cvs.addEventListener('touchmove', e => {
+                    if(!this.input.active) return;
+                    e.preventDefault();
+                    const t = e.changedTouches[0];
+                    const dx = t.clientX - this.input.lastX;
+                    const dy = t.clientY - this.input.lastY;
+                    this.player.rot.y -= dx * 0.003;
+                    this.player.rot.x -= dy * 0.003;
+                    this.player.rot.x = Math.max(-1.4, Math.min(1.4, this.player.rot.x));
+                    this.input.lastX = t.clientX; this.input.lastY = t.clientY;
+                }, {passive:false});
+
+                cvs.addEventListener('touchend', e => {
+                    const t = e.changedTouches[0];
+                    const dist = Math.hypot(t.clientX - this.input.startX, t.clientY - this.input.startY);
+                    if (Date.now() - this.input.tapTime < 300 && dist < 10) {
+                        this.mouse.x = (t.clientX/window.innerWidth)*2-1;
+                        this.mouse.y = -(t.clientY/window.innerHeight)*2+1;
+                        this.raycaster.setFromCamera(this.mouse, this.camera);
+                        const hits = this.raycaster.intersectObject(this.floor);
+                        if(hits.length > 0) {
+                            this.walkTo(hits[0].point);
+                            const rip = document.createElement('div');
+                            rip.className = 'ripple';
+                            rip.style.left = t.clientX+'px'; rip.style.top = t.clientY+'px';
+                            document.body.appendChild(rip);
+                            setTimeout(()=>rip.remove(), 1000);
+                        }
+                    }
+                    this.input.active = false;
+                });
+            },
+
+            walkTo(point) {
+                TWEEN.removeAll();
+                this.player.isWalking = true;
+                this.player.dest = point.clone();
+            },
+
+            checkCollision(pos) {
+                const radius = this.player.radius;
+                // Boundary check
+                if (Math.abs(pos.x) > 23.5 || Math.abs(pos.z) > 18.5) return true;
+                
+                // Box colliders check
+                const pBox = new THREE.Box3().setFromCenterAndSize(pos, new THREE.Vector3(radius, 4, radius));
+                for(let b of this.colliders) {
+                    if(pBox.intersectsBox(b)) return true;
+                }
+                return false;
+            },
+
+            openArt(art) {
+                this.player.dest = null;
+                this.player.isWalking = false;
+                document.getElementById('ac-title').innerText = art.title;
+                document.getElementById('ac-desc').innerText = art.desc;
+                document.getElementById('art-card').classList.add('active');
+                this.currentArt = art;
+
+                // Human-like framing walk
+                // Art is 6m high. To see 6m at 60deg FOV: dist = (3) / tan(30) = 5.2m
+                const normal = new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(0,1,0), art.ry);
+                const idealPos = art.pos.clone().add(normal.multiplyScalar(6.5));
+                idealPos.y = 2.0;
+
+                new TWEEN.Tween(this.player.pos).to(idealPos, 2000).easing(TWEEN.Easing.Quadratic.InOut).start();
+                
+                const startRot = this.camera.quaternion.clone();
+                this.camera.lookAt(art.pos);
+                const endRot = this.camera.quaternion.clone();
+                this.camera.quaternion.copy(startRot);
+                
+                const qObj = { t: 0 };
+                new TWEEN.Tween(qObj).to({ t: 1 }, 2000).easing(TWEEN.Easing.Quadratic.InOut).onUpdate(() => {
+                    THREE.Quaternion.slerp(startRot, endRot, this.camera.quaternion, qObj.t);
+                    const e = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
+                    this.player.rot.x = e.x; this.player.rot.y = e.y;
+                }).start();
+            },
+
+            closeCard() { document.getElementById('art-card').classList.remove('active'); },
+
+            gotoNextArt() {
+                const idx = (this.currentArt.id + 1) % this.arts.length;
+                this.openArt(this.arts[idx]);
+            },
+
+            toggleMode() {
+                this.mode = this.mode === 'walk' ? 'studio' : 'walk';
+                document.getElementById('studio-panel').classList.toggle('visible');
+                document.getElementById('btn-mode').classList.toggle('active');
+            },
+
+            updateLight(prop, val) {
+                const l = this.lights[this.selLightIdx];
+                if(prop === 'intensity') l.intensity = parseFloat(val);
+                if(prop === 'color') l.color.setHSL(parseFloat(val)/360, 0.8, 0.8);
+            },
+
+            setupUI() {
+                const s = document.getElementById('light-strip');
+                this.lights.forEach((l,i) => {
+                    const d = document.createElement('div'); d.className=`light-node ${i===0?'active':''}`;
+                    d.innerText=i+1; d.onclick=()=> {
+                        document.querySelectorAll('.light-node').forEach(n => n.classList.remove('active'));
+                        d.classList.add('active'); this.selLightIdx = i;
+                    };
+                    s.appendChild(d);
+                });
+            },
+
+            setFov(v) { this.camera.fov = parseFloat(v); this.camera.updateProjectionMatrix(); },
+
+            animate() {
+                requestAnimationFrame(this.animate.bind(this));
+                TWEEN.update();
+                const time = performance.now() * 0.001;
+
+                // Morphing Atmosphere Logic
+                this.atmosphereLights.forEach(item => {
+                    item.light.position.x = item.basePos.x + Math.sin(time * 0.5 + item.offset) * 5;
+                    item.light.position.z = item.basePos.z + Math.cos(time * 0.5 + item.offset) * 5;
+                    item.light.intensity = 6 + Math.sin(time + item.offset) * 2;
+                });
+
+                if(this.mode === 'walk') {
+                    if (this.player.dest) {
+                        const dist = this.player.pos.distanceTo(this.player.dest);
+                        if(dist < 0.2) {
+                            this.player.dest = null;
+                            this.player.isWalking = false;
+                        } else {
+                            const dir = new THREE.Vector3().subVectors(this.player.dest, this.player.pos);
+                            dir.y = 0; dir.normalize();
+                            const step = dir.multiplyScalar(0.14);
+                            const next = this.player.pos.clone().add(step);
+                            
+                            // Prevent vibration: only move if it doesn't cause a collision
+                            if(!this.checkCollision(next)) {
+                                this.player.pos.copy(next);
+                            } else {
+                                this.player.dest = null; // Hard stop at boundaries
+                                this.player.isWalking = false;
+                            }
+                        }
+                    }
+
+                    this.player.pos.y = this.player.headHeight;
+                    this.camera.position.copy(this.player.pos);
+
+                    // Biomechanical Motion: Subtle pitch bob only when moving
+                    let pitchBob = 0;
+                    if (this.player.isWalking) {
+                        this.player.bobTimer += 0.18;
+                        pitchBob = Math.sin(this.player.bobTimer) * 0.015;
+                    } else {
+                        this.player.bobTimer = 0;
+                    }
+
+                    this.camera.rotation.set(this.player.rot.x + pitchBob, this.player.rot.y, 0, 'YXZ');
+
+                    // Marker visibility and placement
+                    this.arts.forEach(a => {
+                        const dist = this.player.pos.distanceTo(a.pos);
+                        const proj = a.pos.clone().project(this.camera);
+                        const isFront = new THREE.Vector3(0,0,-1).applyQuaternion(this.camera.quaternion).dot(a.pos.clone().sub(this.player.pos).normalize()) > 0;
+                        if(dist < 25 && isFront) {
+                            a.el.style.left = (proj.x * 0.5 + 0.5) * window.innerWidth + 'px';
+                            a.el.style.top = (-(proj.y * 0.5) + 0.5) * window.innerHeight + 'px';
+                            a.el.classList.add('visible');
+                        } else a.el.classList.remove('visible');
+                    });
+                }
+
+                this.renderer.render(this.scene, this.camera);
+            }
+        };
+
+        window.onload = () => App.init();
+        window.onresize = () => {
+            App.camera.aspect = window.innerWidth/window.innerHeight;
+            App.camera.updateProjectionMatrix();
+            App.renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+    </script>
+</body>
+</html>

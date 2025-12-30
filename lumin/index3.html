@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Luminarium: Luxe Edition</title>
+    <style>
+        /* --- LUXURY THEME --- */
+        :root { 
+            --gold: #d4af37; 
+            --gold-dim: #8a701e;
+            --accent: #ff4d4d;
+            --glass: rgba(18, 18, 24, 0.65); 
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --blur: blur(24px);
+            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #050505; font-family: var(--font-main); touch-action: none; }
+        
+        canvas { display: block; width: 100vw; height: 100vh; outline: none; }
+        
+        /* --- UI LAYOUT --- */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+        #marker-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        
+        /* --- HUD --- */
+        .hud-top { 
+            position: absolute; top: 0; left: 0; width: 100%; padding: 20px; 
+            display: flex; justify-content: space-between; pointer-events: auto; 
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        }
+        
+        .btn-icon {
+            width: 48px; height: 48px; border-radius: 50%; 
+            background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+            border: 1px solid var(--glass-border); color: #e0e0e0; font-size: 20px; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .btn-icon:active { transform: scale(0.92); }
+        .btn-icon.active { border-color: var(--gold); color: var(--gold); background: rgba(212, 175, 55, 0.1); }
+
+        /* Focal Slider */
+        .focal-slider-container {
+            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+            height: 220px; width: 44px; 
+            background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+            border-radius: 30px; border: 1px solid var(--glass-border); 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            pointer-events: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        input[type=range].vertical {
+            writing-mode: bt-lr; -webkit-appearance: slider-vertical;
+            width: 6px; height: 160px; background: rgba(255,255,255,0.1); opacity: 0.8; margin-top: 10px;
+        }
+
+        /* --- STUDIO PANEL --- */
+        #studio-panel {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: rgba(10, 10, 12, 0.85); 
+            backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            transform: translateY(110%); transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+            pointer-events: auto; padding-bottom: max(20px, env(safe-area-inset-bottom));
+            display: flex; flex-direction: column;
+            box-shadow: 0 -20px 50px rgba(0,0,0,0.5);
+        }
+        #studio-panel.visible { transform: translateY(0); }
+
+        .studio-header { 
+            padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; 
+        }
+        .studio-title { font-size: 12px; font-weight: 700; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; }
+        .studio-hint { font-size: 10px; color: #666; font-weight: 600; letter-spacing: 0.5px; }
+        
+        /* Light Selector */
+        .light-strip { display: flex; gap: 12px; padding: 0 25px 20px; overflow-x: auto; scrollbar-width: none; }
+        .light-node {
+            min-width: 50px; height: 50px; background: rgba(255,255,255,0.03); 
+            border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; 
+            color: #666; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 16px; transition: 0.3s;
+        }
+        .light-node.active { 
+            border-color: var(--gold); color: #fff; background: linear-gradient(135deg, rgba(212,175,55,0.2), transparent);
+            box-shadow: 0 4px 15px rgba(212,175,55,0.15); transform: translateY(-2px);
+        }
+
+        /* Sliders */
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 30px; padding: 0 25px 10px; }
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        .label-row { display: flex; justify-content: space-between; font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+        
+        input[type=range].h-slider { width: 100%; -webkit-appearance: none; background: transparent; margin: 0; }
+        input[type=range].h-slider::-webkit-slider-track { height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; }
+        input[type=range].h-slider::-webkit-slider-thumb { 
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #e0e0e0; 
+            margin-top: -6.5px; box-shadow: 0 2px 10px rgba(0,0,0,0.5); transition: 0.2s;
+        }
+        input[type=range].h-slider:active::-webkit-slider-thumb { transform: scale(1.2); background: var(--gold); }
+
+        /* --- ART MARKERS (Floating Glass) --- */
+        .art-marker {
+            position: absolute; width: 40px; height: 40px; 
+            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; pointer-events: auto;
+            transform: translate(-50%, -50%) scale(0); transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .art-marker.visible { transform: translate(-50%, -50%) scale(1); }
+        .marker-dot { width: 8px; height: 8px; background: #fff; border-radius: 50%; box-shadow: 0 0 10px #fff; }
+
+        /* --- ART CARD (Glassmorphism) --- */
+        .art-card {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(40px);
+            width: 85%; max-width: 400px; 
+            background: rgba(20, 20, 25, 0.75);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 28px; padding: 30px;
+            backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%);
+            opacity: 0; visibility: hidden; transition: 0.6s cubic-bezier(0.19, 1, 0.22, 1); pointer-events: auto;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+        .art-card.active { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+        .art-card h2 { margin: 0 0 8px 0; color: #fff; font-size: 24px; font-weight: 300; letter-spacing: -0.5px; }
+        .art-card p { margin: 0 0 25px 0; color: #aaa; font-size: 14px; line-height: 1.6; font-weight: 400; }
+        
+        .btn-primary { 
+            width: 100%; padding: 14px; background: #fff; border: none; border-radius: 16px; 
+            font-weight: 700; font-size: 13px; color: #000; letter-spacing: 0.5px; cursor: pointer; 
+            transition: 0.2s; text-transform: uppercase;
+        }
+        .btn-primary:active { transform: scale(0.98); background: var(--gold); }
+        .btn-close {
+            background:transparent; color:rgba(255,255,255,0.5); border:none; 
+            width:100%; margin-top:15px; padding:10px; font-size: 12px; cursor: pointer;
+        }
+
+        /* Tap Ripple */
+        .ripple {
+            position: absolute; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.4);
+            transform: translate(-50%, -50%); pointer-events: none;
+            animation: rip-anim 0.8s ease-out forwards;
+        }
+        @keyframes rip-anim { 0% { width: 0; height: 0; opacity: 1; border-width: 4px; } 100% { width: 150px; height: 150px; opacity: 0; border-width: 0; } }
+        
+        /* Loading */
+        #loading { position: absolute; top:0; left:0; width:100%; height:100%; background:#050505; color:var(--gold); display:flex; align-items:center; justify-content:center; letter-spacing:4px; font-size: 12px; font-weight: 700; z-index:9999; transition: opacity 0.8s; }
+    </style>
+</head>
+<body>
+
+    <div id="loading">GENERATING GALLERY...</div>
+
+    <canvas id="gl-canvas"></canvas>
+    <div id="marker-layer"></div>
+
+    <div id="ui-layer">
+        
+        <div class="hud-top">
+            <div class="btn-icon" id="btn-mode" onclick="App.toggleMode()">🛠️</div>
+            <div class="btn-icon" id="btn-undo" onclick="App.undo()" style="opacity:0.5">↺</div>
+        </div>
+
+        <div class="focal-slider-container">
+            <span style="font-size:14px; color:#fff; margin-bottom:10px; opacity:0.8">🔭</span>
+            <input type="range" class="vertical" min="20" max="200" value="60" oninput="App.setFov(this.value)">
+        </div>
+
+        <div class="art-card" id="art-card">
+            <h2 id="ac-title">Art Title</h2>
+            <p id="ac-desc">Description goes here.</p>
+            <button class="btn-primary" onclick="App.gotoNextArt()">Visit Next</button>
+            <button class="btn-close" onclick="App.closeCard()">Close</button>
+        </div>
+
+        <div id="studio-panel">
+            <div class="studio-header">
+                <span class="studio-title">Light Designer</span>
+                <span class="studio-hint">2-Finger Drag to Move • 1-Finger Orbit</span>
+            </div>
+
+            <div class="light-strip" id="light-strip"></div>
+
+            <div class="controls-grid">
+                <div class="control-group">
+                    <div class="label-row"><span>Lumen</span><span id="lbl-int">1.0</span></div>
+                    <input type="range" class="h-slider" min="0" max="8" step="0.1" id="sl-int" onchange="App.saveState()" oninput="App.updateLight('intensity', this.value)">
+                </div>
+                <div class="control-group">
+                    <div class="label-row"><span>Hue</span><span id="lbl-col">Warm</span></div>
+                    <input type="range" class="h-slider" min="0" max="360" step="1" id="sl-col" onchange="App.saveState()" oninput="App.updateLight('color', this.value)">
+                </div>
+                <div class="control-group">
+                    <div class="label-row"><span>Focus</span><span id="lbl-ang">30°</span></div>
+                    <input type="range" class="h-slider" min="0.1" max="1.2" step="0.05" id="sl-ang" onchange="App.saveState()" oninput="App.updateLight('angle', this.value)">
+                </div>
+                <div class="control-group">
+                    <div class="label-row"><span>Softness</span><span id="lbl-pen">0.5</span></div>
+                    <input type="range" class="h-slider" min="0" max="1" step="0.05" id="sl-pen" onchange="App.saveState()" oninput="App.updateLight('penumbra', this.value)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- THREE.JS & TWEEN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+    <script>
+        // --- HISTORY SYSTEM ---
+        class HistoryStack {
+            constructor() { this.stack = []; }
+            push(state) {
+                if(this.stack.length > 20) this.stack.shift();
+                this.stack.push(state);
+                document.getElementById('btn-undo').style.opacity = 1;
+            }
+            pop() { return this.stack.pop(); }
+        }
+
+        const App = {
+            scene: null, camera: null, renderer: null,
+            mode: 'walk', // walk | studio
+            lights: [],
+            arts: [],
+            colliders: [], // Objects to collide with
+            selLightIdx: 0,
+            history: new HistoryStack(),
+            
+            raycaster: new THREE.Raycaster(),
+            mouse: new THREE.Vector2(),
+            
+            player: {
+                pos: new THREE.Vector3(0, 1.7, 14),
+                rot: new THREE.Euler(0, 0, 0, 'YXZ'),
+                dest: null,
+                isWalking: false,
+                headHeight: 1.7,
+                bobTimer: 0
+            },
+
+            input: {
+                active: false,
+                mode: null,
+                startX: 0, startY: 0,
+                lastX: 0, lastY: 0,
+                touchId: null, touchId2: null,
+                tapTime: 0
+            },
+
+            // --- INIT ---
+            init() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x050505);
+                this.scene.fog = new THREE.FogExp2(0x050505, 0.02);
+
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+                
+                this.renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gl-canvas'), antialias: true, powerPreference: "high-performance" });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                this.renderer.outputEncoding = THREE.sRGBEncoding;
+
+                this.buildWorld();
+                this.setupLights();
+                this.setupInputs();
+                this.setupUI();
+
+                requestAnimationFrame(this.animate.bind(this));
+                
+                setTimeout(() => document.getElementById('loading').style.opacity = 0, 1500);
+                setTimeout(() => document.getElementById('loading').remove(), 2000);
+            },
+
+            // --- LUXURY WORLD GENERATION ---
+            buildWorld() {
+                // Procedural Luxury Materials
+                const noiseTex = (color, grain) => {
+                    const c = document.createElement('canvas'); c.width=512; c.height=512;
+                    const ctx = c.getContext('2d');
+                    ctx.fillStyle = color; ctx.fillRect(0,0,512,512);
+                    if(grain) {
+                        ctx.fillStyle = '#000'; ctx.globalAlpha = 0.03;
+                        for(let i=0; i<40000; i++) ctx.fillRect(Math.random()*512, Math.random()*512, 1, 1);
+                    }
+                    const t = new THREE.CanvasTexture(c);
+                    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+                    return t;
+                };
+
+                // Pattern Textures (Linen / Geometric)
+                const patternTex = (c1, c2) => {
+                    const c = document.createElement('canvas'); c.width=512; c.height=512;
+                    const ctx = c.getContext('2d');
+                    ctx.fillStyle = c1; ctx.fillRect(0,0,512,512);
+                    
+                    ctx.strokeStyle = c2; ctx.lineWidth = 1; ctx.globalAlpha = 0.08;
+                    // Crosshatch
+                    for(let i=0; i<=512; i+=4) {
+                        ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,512); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(512,i); ctx.stroke();
+                    }
+                    // Subtle Larger Grid
+                    ctx.lineWidth = 2; ctx.globalAlpha = 0.05;
+                    for(let i=0; i<=512; i+=128) {
+                        ctx.strokeRect(i, 0, 1, 512);
+                        ctx.strokeRect(0, i, 512, 1);
+                    }
+                    
+                    const t = new THREE.CanvasTexture(c);
+                    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+                    return t;
+                };
+
+                // Materials
+                const floorMat = new THREE.MeshPhysicalMaterial({ 
+                    map: noiseTex('#0f0f12', true), 
+                    roughness: 0.1, metalness: 0.2, clearcoat: 1.0, clearcoatRoughness: 0.1 
+                });
+                floorMat.map.repeat.set(8,8);
+
+                const wallMat = new THREE.MeshStandardMaterial({ 
+                    map: patternTex('#222', '#666'), roughness: 0.8, color: 0xeeeeee 
+                });
+                wallMat.map.repeat.set(4,2);
+
+                const goldMat = new THREE.MeshStandardMaterial({ 
+                    color: 0xffd700, metalness: 1, roughness: 0.3 
+                });
+
+                // --- ARCHITECTURE ---
+                // Floor
+                const floor = new THREE.Mesh(new THREE.PlaneGeometry(60,60), floorMat);
+                floor.rotation.x = -Math.PI/2;
+                floor.receiveShadow = true;
+                this.scene.add(floor);
+                this.floor = floor;
+
+                // Function to create smooth curved wall sections
+                const createCurvedWall = (x, z, rotY, length) => {
+                    // Using Box for simplicity but with rounded end caps logic implied by styling
+                    // Here we use thin high-res boxes
+                    const h = 8;
+                    const d = 0.6;
+                    const wall = new THREE.Mesh(new THREE.BoxGeometry(length, h, d), wallMat);
+                    wall.position.set(x, h/2, z);
+                    wall.rotation.y = rotY;
+                    wall.castShadow = true; wall.receiveShadow = true;
+                    this.scene.add(wall);
+                    
+                    // Collision Box
+                    const box = new THREE.Box3().setFromObject(wall);
+                    this.colliders.push(box);
+                };
+
+                // Gallery Layout (Modern Open Plan)
+                createCurvedWall(0, -15, 0, 40); // Back
+                createCurvedWall(-20, 0, Math.PI/2, 30); // Left
+                createCurvedWall(20, 0, Math.PI/2, 30); // Right
+                createCurvedWall(0, 15, 0, 40); // Front
+                
+                // Central Features (Round Pillars)
+                const pillarGeo = new THREE.CylinderGeometry(1.5, 1.5, 8, 32);
+                const p1 = new THREE.Mesh(pillarGeo, wallMat); p1.position.set(-8, 4, 0);
+                const p2 = new THREE.Mesh(pillarGeo, wallMat); p2.position.set(8, 4, 0);
+                p1.castShadow=true; p1.receiveShadow=true;
+                p2.castShadow=true; p2.receiveShadow=true;
+                this.scene.add(p1); this.scene.add(p2);
+                
+                this.colliders.push(new THREE.Box3().setFromObject(p1));
+                this.colliders.push(new THREE.Box3().setFromObject(p2));
+
+                // Benches
+                const createBench = (x, z, rotY) => {
+                    const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rotY;
+                    
+                    // Seat
+                    const seat = new THREE.Mesh(new THREE.BoxGeometry(3, 0.4, 1), new THREE.MeshStandardMaterial({color: 0x1a1a1a, roughness: 0.9}));
+                    seat.position.y = 0.5;
+                    
+                    // Legs
+                    const legGeo = new THREE.BoxGeometry(0.2, 0.5, 1);
+                    const legMat = new THREE.MeshStandardMaterial({color: 0x3d2b1f, roughness: 0.8});
+                    const l1 = new THREE.Mesh(legGeo, legMat); l1.position.set(-1.2, 0.25, 0);
+                    const l2 = new THREE.Mesh(legGeo, legMat); l2.position.set(1.2, 0.25, 0);
+
+                    g.add(seat, l1, l2);
+                    g.castShadow = true;
+                    seat.castShadow = true; seat.receiveShadow = true;
+                    
+                    this.scene.add(g);
+                    this.colliders.push(new THREE.Box3().setFromObject(g));
+                };
+
+                createBench(0, 0, 0); // Center bench
+                createBench(-14, -8, Math.PI/2);
+                createBench(14, -8, Math.PI/2);
+
+                // --- ARTWORK ---
+                const artGen = (hue, type) => {
+                    const c = document.createElement('canvas'); c.width=512; c.height=512;
+                    const x = c.getContext('2d');
+                    // Modern Gradient
+                    const grd = x.createLinearGradient(0,0,512,512);
+                    grd.addColorStop(0, `hsl(${hue}, 40%, 20%)`);
+                    grd.addColorStop(1, `hsl(${(hue+40)%360}, 60%, 50%)`);
+                    x.fillStyle=grd; x.fillRect(0,0,512,512);
+                    // Minimalist Shapes
+                    x.fillStyle = 'rgba(255,255,255,0.1)';
+                    if(type===0) x.arc(256,256, 100, 0, Math.PI*2);
+                    else x.fillRect(100,100,312,312);
+                    x.fill();
+                    return new THREE.CanvasTexture(c);
+                };
+
+                const createArt = (pos, rotY, hue, title, type) => {
+                    const group = new THREE.Group();
+                    group.position.copy(pos);
+                    group.rotation.y = rotY;
+
+                    // Frame
+                    const fGeo = new THREE.BoxGeometry(3.2, 4.2, 0.15);
+                    const frame = new THREE.Mesh(fGeo, new THREE.MeshStandardMaterial({color:0x111, roughness:0.5}));
+                    
+                    // Canvas
+                    const cGeo = new THREE.PlaneGeometry(2.8, 3.8);
+                    const canvas = new THREE.Mesh(cGeo, new THREE.MeshBasicMaterial({map: artGen(hue, type)}));
+                    canvas.position.z = 0.08;
+                    
+                    frame.add(canvas);
+                    group.add(frame);
+                    this.scene.add(group);
+
+                    // Calc interactive position (1m in front)
+                    const iPos = pos.clone().add(new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(0,1,0), rotY));
+
+                    this.arts.push({
+                        id: this.arts.length,
+                        pos: pos, // Actual art position
+                        viewPos: iPos,
+                        title: title,
+                        desc: "An exploration of procedural minimalism and color theory.",
+                        el: null,
+                        rot: rotY
+                    });
+                };
+
+                createArt(new THREE.Vector3(0, 3.5, -14.2), 0, 220, "Deep Ocean", 0);
+                createArt(new THREE.Vector3(-8, 3.5, -14.2), 0, 340, "Crimson Echo", 1);
+                createArt(new THREE.Vector3(8, 3.5, -14.2), 0, 40, "Amber Sol", 1);
+                createArt(new THREE.Vector3(-19.2, 3.5, 0), Math.PI/2, 120, "Veridian Shift", 0);
+                createArt(new THREE.Vector3(19.2, 3.5, 0), -Math.PI/2, 280, "Violet Haze", 0);
+
+                // Markers
+                const layer = document.getElementById('marker-layer');
+                this.arts.forEach(a => {
+                    const el = document.createElement('div');
+                    el.className = 'art-marker';
+                    el.innerHTML = '<div class="marker-dot"></div>';
+                    el.onclick = (e) => { e.stopPropagation(); this.openCard(a); };
+                    layer.appendChild(el);
+                    a.el = el;
+                });
+            },
+
+            setupLights() {
+                // Base Ambient
+                this.scene.add(new THREE.HemisphereLight(0xffffff, 0x000000, 0.2));
+
+                const makeSpot = (x, z, idx) => {
+                    const g = new THREE.Group(); g.position.set(x, 9, z);
+                    
+                    // Detailed Projector
+                    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.6), new THREE.MeshStandardMaterial({color:0x111}));
+                    body.rotation.x = Math.PI/2;
+                    const yoke = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.1), new THREE.MeshStandardMaterial({color:0x333}));
+                    yoke.position.y = 0.4;
+                    
+                    const head = new THREE.Group();
+                    head.add(body);
+                    
+                    const swivel = new THREE.Group();
+                    swivel.add(yoke);
+                    swivel.add(head);
+                    g.add(swivel);
+                    this.scene.add(g);
+
+                    const spot = new THREE.SpotLight(0xffd700, 2);
+                    spot.position.set(0,0,0);
+                    spot.angle = 0.5;
+                    spot.penumbra = 0.4;
+                    spot.decay = 2;
+                    spot.distance = 50;
+                    spot.castShadow = true;
+                    head.add(spot);
+
+                    const target = new THREE.Object3D();
+                    target.position.set(x, 2, z-5);
+                    this.scene.add(target);
+                    spot.target = target;
+
+                    const helper = new THREE.SpotLightHelper(spot, 0xffd700);
+                    helper.visible = false;
+                    this.scene.add(helper);
+
+                    const proxy = new THREE.Mesh(new THREE.ConeGeometry(3, 10, 8, 1, true), new THREE.MeshBasicMaterial({visible:false, side:THREE.DoubleSide}));
+                    proxy.position.set(x, 9, z);
+                    this.scene.add(proxy);
+
+                    this.lights.push({ id: idx, light: spot, target, group: g, swivel, head, helper, proxy });
+                };
+
+                // Array of lights matching art positions approximately
+                [[0,-8], [-8,-8], [8,-8], [-12,0], [12,0]].forEach((p,i) => makeSpot(p[0], p[1], i));
+            },
+
+            // --- INPUT ---
+            setupInputs() {
+                const cvs = this.renderer.domElement;
+                
+                cvs.addEventListener('touchstart', e => {
+                    e.preventDefault();
+                    if(e.target.closest('.interactive')) return;
+                    const t = e.touches[0];
+                    this.input.startX = t.clientX; this.input.startY = t.clientY;
+                    this.input.lastX = t.clientX; this.input.lastY = t.clientY;
+                    this.input.tapTime = Date.now();
+                    this.input.active = true;
+
+                    if(this.mode === 'studio') {
+                        // Studio Input Logic
+                        if(e.touches.length === 2) {
+                            this.input.mode = 'panLight';
+                            this.saveState();
+                        } else {
+                            this.mouse.x = (t.clientX/window.innerWidth)*2-1;
+                            this.mouse.y = -(t.clientY/window.innerHeight)*2+1;
+                            this.raycaster.setFromCamera(this.mouse, this.camera);
+                            const l = this.lights[this.selLightIdx];
+                            if(this.raycaster.intersectObject(l.proxy).length > 0) {
+                                this.input.mode = 'dragTarget';
+                                this.saveState();
+                            } else {
+                                this.input.mode = 'orbit';
+                            }
+                        }
+                    } else {
+                        this.input.mode = 'look';
+                    }
+                }, {passive:false});
+
+                cvs.addEventListener('touchmove', e => {
+                    if(!this.input.active) return;
+                    e.preventDefault();
+                    
+                    if(this.mode === 'walk' && this.input.mode === 'look') {
+                        const t = e.changedTouches[0];
+                        const dx = t.clientX - this.input.lastX;
+                        const dy = t.clientY - this.input.lastY;
+                        this.player.rot.y -= dx * 0.003;
+                        this.player.rot.x -= dy * 0.003;
+                        this.player.rot.x = Math.max(-1.4, Math.min(1.4, this.player.rot.x));
+                        this.input.lastX = t.clientX; this.input.lastY = t.clientY;
+                    }
+                    else if (this.mode === 'studio') {
+                        const l = this.lights[this.selLightIdx];
+                        if(this.input.mode === 'orbit') {
+                            const t = e.changedTouches[0];
+                            this.camera.rotation.y -= (t.clientX - this.input.lastX) * 0.004;
+                            this.camera.rotation.x -= (t.clientY - this.input.lastY) * 0.004;
+                            this.input.lastX = t.clientX; this.input.lastY = t.clientY;
+                        }
+                        else if (this.input.mode === 'dragTarget') {
+                            const t = e.changedTouches[0];
+                            this.mouse.x = (t.clientX/window.innerWidth)*2-1;
+                            this.mouse.y = -(t.clientY/window.innerHeight)*2+1;
+                            this.raycaster.setFromCamera(this.mouse, this.camera);
+                            const hits = this.raycaster.intersectObject(this.floor);
+                            if(hits.length>0) {
+                                l.target.position.copy(hits[0].point);
+                                this.updateLightRig(l);
+                            }
+                        }
+                        else if (this.input.mode === 'panLight' && e.touches.length===2) {
+                            const t1 = e.touches[0], t2 = e.touches[1];
+                            const cx = (t1.clientX+t2.clientX)/2, cy = (t1.clientY+t2.clientY)/2;
+                            const dx = cx - this.input.lastX, dy = cy - this.input.lastY;
+                            const camY = this.camera.rotation.y;
+                            const speed = 0.05;
+                            l.group.position.x += (Math.cos(camY)*dx - Math.sin(camY)*dy)*speed;
+                            l.group.position.z += (Math.sin(camY)*dx + Math.cos(camY)*dy)*speed;
+                            l.proxy.position.copy(l.group.position);
+                            this.updateLightRig(l);
+                            this.input.lastX = cx; this.input.lastY = cy;
+                        }
+                    }
+                }, {passive:false});
+
+                cvs.addEventListener('touchend', e => {
+                    const t = e.changedTouches[0];
+                    const dur = Date.now() - this.input.tapTime;
+                    const dist = Math.hypot(this.input.lastX - this.input.startX, this.input.lastY - this.input.startY);
+                    
+                    if (this.mode === 'walk' && dur < 300 && dist < 10) {
+                        this.mouse.x = (t.clientX/window.innerWidth)*2-1;
+                        this.mouse.y = -(t.clientY/window.innerHeight)*2+1;
+                        this.raycaster.setFromCamera(this.mouse, this.camera);
+                        const hits = this.raycaster.intersectObject(this.floor);
+                        if(hits.length > 0) {
+                            this.startWalk(hits[0].point);
+                            // Visual Ripple
+                            const rip = document.createElement('div');
+                            rip.className = 'ripple';
+                            rip.style.left = t.clientX+'px'; rip.style.top = t.clientY+'px';
+                            document.body.appendChild(rip);
+                            setTimeout(()=>rip.remove(), 800);
+                        }
+                    }
+                    if(e.touches.length===0) this.input.active = false;
+                });
+            },
+
+            // --- MOVEMENT & PHYSICS ---
+            startWalk(point) {
+                // Cancel any existing tweens on player
+                TWEEN.removeAll();
+                this.player.isWalking = true;
+                this.player.dest = point;
+            },
+
+            checkCollision(newPos) {
+                const pBox = new THREE.Box3().setFromCenterAndSize(newPos, new THREE.Vector3(0.5, 2, 0.5));
+                for(let b of this.colliders) {
+                    if(pBox.intersectsBox(b)) return true;
+                }
+                return false;
+            },
+
+            // --- UI LOGIC ---
+            saveState() {
+                const l = this.lights[this.selLightIdx];
+                this.history.push({
+                    idx: this.selLightIdx,
+                    pos: l.group.position.clone(), target: l.target.position.clone(),
+                    int: l.light.intensity, col: l.light.color.getHex(),
+                    ang: l.light.angle, pen: l.light.penumbra
+                });
+            },
+
+            undo() {
+                const s = this.history.pop();
+                if(!s) return;
+                if(s.idx !== this.selLightIdx) this.selectLight(s.idx);
+                const l = this.lights[s.idx];
+                l.group.position.copy(s.pos); l.proxy.position.copy(s.pos); l.target.position.copy(s.target);
+                l.light.intensity = s.int; l.light.color.setHex(s.col);
+                l.light.angle = s.ang; l.light.penumbra = s.pen;
+                this.updateLightRig(l);
+                this.updateUIValues(l);
+            },
+
+            updateLight(prop, val) {
+                const l = this.lights[this.selLightIdx];
+                val = parseFloat(val);
+                if(prop==='color') {
+                    l.light.color.setHSL(val/360, 1, 0.6); // Full Hue Spectrum
+                } else {
+                    l.light[prop] = val;
+                }
+                l.helper.update();
+            },
+
+            updateLightRig(l) {
+                l.swivel.lookAt(l.target.position.x, l.group.position.y, l.target.position.z);
+                const d = l.group.position.distanceTo(l.target.position);
+                const dy = l.target.position.y - l.group.position.y;
+                l.head.rotation.x = Math.atan2(-dy, Math.hypot(l.target.position.x-l.group.position.x, l.target.position.z-l.group.position.z));
+                l.helper.update();
+                l.proxy.rotation.copy(l.swivel.rotation); l.proxy.rotateX(l.head.rotation.x);
+            },
+
+            selectLight(idx) {
+                this.lights[this.selLightIdx].helper.visible = false;
+                this.selLightIdx = idx;
+                const l = this.lights[idx];
+                l.helper.visible = true;
+                this.updateUIValues(l);
+                
+                // Fly Cam
+                const tPos = l.group.position.clone().add(new THREE.Vector3(6, 3, 6));
+                new TWEEN.Tween(this.camera.position).to(tPos, 1200).easing(TWEEN.Easing.Cubic.Out).start();
+                this.camera.lookAt(l.target.position);
+
+                document.querySelectorAll('.light-node').forEach((el,i) => el.classList.toggle('active', i===idx));
+            },
+
+            updateUIValues(l) {
+                document.getElementById('sl-int').value = l.light.intensity;
+                document.getElementById('lbl-int').innerText = l.light.intensity.toFixed(1);
+                document.getElementById('sl-ang').value = l.light.angle;
+                document.getElementById('sl-pen').value = l.light.penumbra;
+                // Hue reconstruction is tricky without storing it, defaulting UI reset mostly visual
+            },
+
+            toggleMode() {
+                this.mode = this.mode==='walk'?'studio':'walk';
+                const p = document.getElementById('studio-panel');
+                const b = document.getElementById('btn-mode');
+                if(this.mode==='studio') {
+                    p.classList.add('visible'); b.classList.add('active');
+                    this.selectLight(this.selLightIdx);
+                } else {
+                    p.classList.remove('visible'); b.classList.remove('active');
+                    this.lights[this.selLightIdx].helper.visible=false;
+                    new TWEEN.Tween(this.camera.position).to(this.player.pos, 1000).easing(TWEEN.Easing.Cubic.Out).start();
+                }
+            },
+
+            // --- ART NAVIGATION ---
+            openCard(art) {
+                this.player.dest = null; // Stop walking
+                document.getElementById('ac-title').innerText = art.title;
+                document.getElementById('art-card').classList.add('active');
+                this.currentArt = art;
+            },
+            closeCard() { document.getElementById('art-card').classList.remove('active'); },
+            
+            gotoNextArt() {
+                this.closeCard();
+                const next = this.arts[(this.currentArt.id+1) % this.arts.length];
+                
+                // Calculate ideal standing position: 3 meters back along the normal
+                // Since art rotY is stored, normal is simple
+                const normal = new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(0,1,0), next.rot);
+                const standPos = next.pos.clone().add(normal.multiplyScalar(3.0));
+                standPos.y = 1.7; // Eye level
+
+                // Cinematic Tween
+                this.player.isWalking = false; // Disable physics loop for a moment
+                
+                // 1. Move Position
+                new TWEEN.Tween(this.player.pos)
+                    .to(standPos, 2500)
+                    .easing(TWEEN.Easing.Quadratic.InOut)
+                    .start();
+
+                // 2. Rotate Look (Tweening Camera Quaternion for smoothness)
+                // We want to look at the Art
+                const startRot = this.camera.quaternion.clone();
+                this.camera.lookAt(next.pos);
+                const endRot = this.camera.quaternion.clone();
+                this.camera.quaternion.copy(startRot); // Reset
+
+                const qObj = { t: 0 };
+                new TWEEN.Tween(qObj)
+                    .to({ t: 1 }, 2500)
+                    .easing(TWEEN.Easing.Quadratic.InOut)
+                    .onUpdate(() => {
+                        THREE.Quaternion.slerp(startRot, endRot, this.camera.quaternion, qObj.t);
+                        // Sync player rot
+                        const e = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
+                        this.player.rot.y = e.y;
+                        this.player.rot.x = e.x;
+                    })
+                    .start();
+            },
+
+            setupUI() {
+                const s = document.getElementById('light-strip');
+                this.lights.forEach((l,i) => {
+                    const d = document.createElement('div'); d.className=`light-node ${i===0?'active':''}`;
+                    d.innerText=i+1; d.onclick=()=>this.selectLight(i); s.appendChild(d);
+                });
+            },
+            setFov(v) { this.camera.fov = parseFloat(v); this.camera.updateProjectionMatrix(); },
+
+            // --- ANIMATION LOOP ---
+            animate() {
+                requestAnimationFrame(this.animate.bind(this));
+                TWEEN.update();
+
+                if(this.mode === 'walk') {
+                    if(this.player.dest && !this.player.isWalking) this.player.dest = null; // Tween took over
+
+                    // Natural Walking Logic
+                    if (this.player.dest) {
+                        const dist = this.player.pos.distanceTo(this.player.dest);
+                        if(dist < 0.2) {
+                            this.player.dest = null;
+                            this.player.isWalking = false;
+                        } else {
+                            // Move vector
+                            const dir = new THREE.Vector3().subVectors(this.player.dest, this.player.pos);
+                            dir.y = 0; // Force horizontal only
+                            dir.normalize();
+
+                            const moveDist = 0.12;
+                            const nextPos = this.player.pos.clone().add(dir.multiplyScalar(moveDist));
+                            
+                            // Collision Check (Simple Bumper)
+                            if(!this.checkCollision(nextPos)) {
+                                this.player.pos.copy(nextPos);
+                            } else {
+                                // Slide attempt (try moving X only then Z only)
+                                const tryX = this.player.pos.clone().add(new THREE.Vector3(dir.x*moveDist, 0, 0));
+                                if(!this.checkCollision(tryX)) this.player.pos.copy(tryX);
+                                else {
+                                    const tryZ = this.player.pos.clone().add(new THREE.Vector3(0, 0, dir.z*moveDist));
+                                    if(!this.checkCollision(tryZ)) this.player.pos.copy(tryZ);
+                                    else this.player.dest = null; // Stuck
+                                }
+                            }
+                        }
+                    }
+
+                    // --- PHYSICS: HUMAN HEAD MOTION ---
+                    this.camera.position.copy(this.player.pos);
+                    
+                    const time = Date.now() * 0.001;
+                    let yOffset = 0;
+                    
+                    if(this.player.dest || this.player.isWalking) {
+                        // Walking: Head Bob (Sine wave)
+                        this.player.bobTimer += 0.2;
+                        yOffset = Math.sin(this.player.bobTimer) * 0.04; 
+                    } else {
+                        // Idle: Breathing (Slow Sine)
+                        yOffset = Math.sin(time * 1.5) * 0.004;
+                        this.player.bobTimer = 0; // Reset stride
+                        
+                        // "Alive" Micro-Movements (If user not touching)
+                        if (!this.input.active) {
+                            const driftX = Math.sin(time * 0.4) * 0.0008; // Very subtle yaw drift
+                            const driftY = Math.cos(time * 0.3) * 0.0008; // Very subtle pitch drift
+                            this.player.rot.y += driftX;
+                            this.player.rot.x += driftY;
+                        }
+                    }
+
+                    // Enforce Height + Bob
+                    this.camera.position.y = this.player.headHeight + yOffset;
+                    
+                    // Apply Look
+                    this.camera.rotation.copy(this.player.rot);
+
+                    // Markers
+                    this.arts.forEach(a => {
+                        const d = this.player.pos.distanceTo(a.pos);
+                        const vTo = a.pos.clone().sub(this.player.pos).normalize();
+                        const cDir = new THREE.Vector3(); this.camera.getWorldDirection(cDir);
+                        if(d < 15 && cDir.dot(vTo) > 0.6) {
+                            const p = a.pos.clone().project(this.camera);
+                            const x = (p.x*.5+.5)*window.innerWidth, y = (-(p.y*.5)+.5)*window.innerHeight;
+                            a.el.style.left = x+'px'; a.el.style.top = y+'px';
+                            a.el.classList.add('visible');
+                        } else a.el.classList.remove('visible');
+                    });
+                } else {
+                    this.lights.forEach(l => this.updateLightRig(l));
+                }
+
+                this.renderer.render(this.scene, this.camera);
+            }
+        };
+
+        window.onload = () => App.init();
+        window.onresize = () => {
+            App.camera.aspect = window.innerWidth/window.innerHeight;
+            App.camera.updateProjectionMatrix();
+            App.renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Luminarium: Duplex Luxe</title>
+    <style>
+        :root { 
+            --gold: #d4af37; 
+            --accent: #6a5acd;
+            --glass: rgba(10, 10, 15, 0.8); 
+            --blur: blur(25px);
+            --font: 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; margin: 0; padding: 0; }
+        body { background: #050508; font-family: var(--font); overflow: hidden; touch-action: none; color: #fff; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        
+        /* UI LAYERS */
+        #ui-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 10; display: flex; flex-direction: column; }
+        .interactive { pointer-events: auto; }
+
+        /* HUD */
+        .hud-top { padding: 30px; display: flex; justify-content: space-between; }
+        .btn-circle {
+            width: 56px; height: 56px; border-radius: 50%;
+            background: var(--glass); border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-size: 24px;
+        }
+        .btn-circle:active { transform: scale(0.9); background: rgba(255,255,255,0.1); }
+
+        /* ART CARD */
+        #art-display {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(30px);
+            width: 90%; max-width: 420px; opacity: 0; visibility: hidden;
+            background: var(--glass); border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+            border-radius: 30px; padding: 35px; text-align: center;
+            transition: 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+        }
+        #art-display.active { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+        #art-display h2 { font-weight: 300; font-size: 28px; margin-bottom: 10px; letter-spacing: -0.5px; }
+        #art-display p { font-size: 15px; color: rgba(255,255,255,0.5); line-height: 1.6; margin-bottom: 30px; }
+        
+        .btn-action {
+            width: 100%; padding: 18px; border-radius: 18px; border: none;
+            background: #fff; color: #000; font-weight: 700; font-size: 14px;
+            text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: 0.3s;
+        }
+        .btn-action:hover { background: var(--gold); }
+
+        /* MARKERS */
+        .marker {
+            position: absolute; width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center;
+            transform: translate(-50%, -50%) scale(0); transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: auto; cursor: pointer; z-index: 5;
+        }
+        .marker.visible { transform: translate(-50%, -50%) scale(1); }
+        .marker-dot { width: 8px; height: 8px; background: #fff; border-radius: 50%; box-shadow: 0 0 15px #fff; }
+
+        /* LOADER */
+        #loader { 
+            position: fixed; inset: 0; background: #050508; z-index: 1000; 
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
+            transition: 1.5s cubic-bezier(0.7, 0, 0.3, 1);
+        }
+        .loader-bar { width: 200px; height: 2px; background: rgba(255,255,255,0.1); position: relative; overflow: hidden; margin-top: 20px; }
+        .loader-progress { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: var(--gold); transition: 0.5s; }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <div style="letter-spacing: 8px; font-size: 12px; font-weight: 700;">LUMINARIUM LUXE</div>
+        <div class="loader-bar"><div class="loader-progress" id="progress"></div></div>
+    </div>
+
+    <canvas id="stage"></canvas>
+    
+    <div id="ui-overlay">
+        <div class="hud-top">
+            <div class="btn-circle interactive" onclick="App.resetPosition()">🏠</div>
+            <div class="btn-circle interactive" onclick="App.toggleAutoWalk()">🎞️</div>
+        </div>
+
+        <div id="art-display" class="interactive">
+            <h2 id="art-title">Exhibit Alpha</h2>
+            <p id="art-desc">A masterpiece of procedural oil and light.</p>
+            <button class="btn-action" onclick="App.nextExhibit()">Next Exhibit</button>
+            <div style="margin-top: 20px; font-size: 12px; color: rgba(255,255,255,0.3); cursor: pointer;" onclick="App.closeExhibit()">Dismiss</div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+    <script>
+        /**
+         * LUMINARIUM DUPLEX ENGINE
+         * Total Rewrite: Focus on Stability, Verticality, and Atmosphere
+         */
+        const App = {
+            init() {
+                this.setupCore();
+                this.createMaterials();
+                this.buildMap();
+                this.setupLights();
+                this.setupControls();
+                this.animate();
+                
+                // Hide loader
+                this.updateProgress(100);
+                setTimeout(() => {
+                    document.getElementById('loader').style.transform = 'translateY(-100%)';
+                }, 1000);
+            },
+
+            updateProgress(p) {
+                document.getElementById('progress').style.width = p + '%';
+            },
+
+            setupCore() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x050508);
+                this.scene.fog = new THREE.FogExp2(0x050508, 0.03);
+
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                
+                this.renderer = new THREE.WebGLRenderer({ 
+                    canvas: document.getElementById('stage'), 
+                    antialias: true,
+                    powerPreference: "high-performance" 
+                });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.renderer.outputEncoding = THREE.sRGBEncoding;
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+                // Physics & State
+                this.player = {
+                    pos: new THREE.Vector3(0, 2, 20),
+                    target: new THREE.Vector3(0, 2, 20),
+                    rot: new THREE.Euler(0, 0, 0, 'YXZ'),
+                    velocity: new THREE.Vector3(),
+                    height: 2.0,
+                    radius: 1.2,
+                    isWalking: false,
+                    bob: 0
+                };
+
+                this.colliders = [];
+                this.groundMeshes = [];
+                this.arts = [];
+                this.ambientLights = [];
+                this.clock = new THREE.Clock();
+                this.raycaster = new THREE.Raycaster();
+                this.downRay = new THREE.Raycaster();
+            },
+
+            createMaterials() {
+                // Threaded Wall Texture
+                const wallSize = 512;
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = wallSize;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, wallSize, wallSize);
+                // Subtle modern thread bumps
+                for(let i=0; i<8000; i++) {
+                    ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.15})`;
+                    ctx.fillRect(Math.random()*wallSize, Math.random()*wallSize, 1, 30);
+                }
+                const wallBump = new THREE.CanvasTexture(canvas);
+                wallBump.wrapS = wallBump.wrapT = THREE.RepeatWrapping;
+                wallBump.repeat.set(2, 2);
+
+                this.mats = {
+                    wood: new THREE.MeshStandardMaterial({ color: 0x1a1512, roughness: 0.9, metalness: 0.1 }),
+                    wall: new THREE.MeshStandardMaterial({ 
+                        color: 0x111115, 
+                        roughness: 0.8, 
+                        bumpMap: wallBump, 
+                        bumpScale: 0.04 
+                    }),
+                    frame: new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.4 }),
+                    // Oil paint simulation for arts
+                    oil: (url) => {
+                        const tex = new THREE.TextureLoader().load(url);
+                        tex.encoding = THREE.sRGBEncoding;
+                        return new THREE.MeshStandardMaterial({ 
+                            map: tex, 
+                            roughness: 0.6, 
+                            bumpMap: wallBump, // reuse the thread bump for oil strokes
+                            bumpScale: 0.08
+                        });
+                    }
+                };
+            },
+
+            buildMap() {
+                // Ground Floor
+                const floor0 = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), this.mats.wood);
+                floor0.rotation.x = -Math.PI/2;
+                floor0.receiveShadow = true;
+                this.scene.add(floor0);
+                this.groundMeshes.push(floor0);
+
+                // Mezzanine Floor (Duplex)
+                const floor1 = new THREE.Mesh(new THREE.BoxGeometry(30, 0.5, 30), this.mats.wood);
+                floor1.position.set(0, 6, -15);
+                floor1.receiveShadow = true;
+                this.scene.add(floor1);
+                this.groundMeshes.push(floor1);
+                this.colliders.push(new THREE.Box3().setFromObject(floor1));
+
+                // Staircase (Vibration-Free Construction)
+                const stepW = 6, stepH = 0.3, stepD = 0.5;
+                const stepCount = 20;
+                const stairGroup = new THREE.Group();
+                for(let i=0; i<stepCount; i++) {
+                    const step = new THREE.Mesh(new THREE.BoxGeometry(stepW, stepH, stepD + 0.1), this.mats.wood);
+                    step.position.set(0, (i+1)*stepH, 4 + i*stepD);
+                    step.receiveShadow = true;
+                    stairGroup.add(step);
+                    this.groundMeshes.push(step);
+                }
+                this.scene.add(stairGroup);
+                // Simple ramp collider for stairs to ensure smoothness
+                const ramp = new THREE.Mesh(new THREE.BoxGeometry(stepW, 0.1, 12), new THREE.MeshBasicMaterial({visible:false}));
+                ramp.position.set(0, 3, 9);
+                ramp.rotation.x = Math.atan2(6, 10);
+                this.scene.add(ramp);
+                this.colliders.push(new THREE.Box3().setFromObject(ramp));
+
+                // Walls (Modern Internal Architecture)
+                const addWall = (w, h, x, y, z, ry) => {
+                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.8), this.mats.wall);
+                    mesh.position.set(x, y + h/2, z);
+                    mesh.rotation.y = ry;
+                    mesh.castShadow = true; mesh.receiveShadow = true;
+                    this.scene.add(mesh);
+                    this.colliders.push(new THREE.Box3().setFromObject(mesh));
+                };
+
+                // Duplex Enclosure
+                addWall(60, 16, 0, 0, -30, 0);       // Back
+                addWall(60, 16, -30, 0, 0, Math.PI/2); // Left
+                addWall(60, 16, 30, 0, 0, -Math.PI/2); // Right
+                
+                // Internal Dividers (Cozy Halls)
+                addWall(12, 6, -15, 0, 5, 0);
+                addWall(12, 6, 15, 0, 5, 0);
+                addWall(20, 10, 0, 6, -10, 0); // Upper divider
+
+                // Arts
+                const addArt = (pos, ry, url, title, desc) => {
+                    const group = new THREE.Group();
+                    group.position.copy(pos);
+                    group.rotation.y = ry;
+
+                    const frame = new THREE.Mesh(new THREE.BoxGeometry(3.6, 5, 0.2), this.mats.frame);
+                    const canvas = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 4.6), this.mats.oil(url));
+                    canvas.position.z = 0.12;
+                    group.add(frame, canvas);
+                    this.scene.add(group);
+
+                    // Marker
+                    const el = document.createElement('div');
+                    el.className = 'marker';
+                    el.innerHTML = '<div class="marker-dot"></div>';
+                    el.onclick = (e) => { e.stopPropagation(); this.openExhibit(this.arts.length - 1); };
+                    document.body.appendChild(el);
+
+                    this.arts.push({ id: this.arts.length, pos, ry, title, desc, el, mesh: group });
+                };
+
+                // Asset Placement (Ground Floor)
+                addArt(new THREE.Vector3(-10, 3.5, 4.5), Math.PI, 'assets/1.jpg', "Sequence Alpha", "The inception of textural oil.");
+                addArt(new THREE.Vector3(10, 3.5, 4.5), Math.PI, 'assets/2.jpg', "Sequence Beta", "A study in duplex symmetry.");
+                addArt(new THREE.Vector3(-29.5, 3.5, -10), Math.PI/2, 'assets/3.jpg', "Threaded Echo", "Interaction of thread and oil.");
+
+                // Mezzanine Arts
+                addArt(new THREE.Vector3(0, 9.5, -29.5), 0, 'assets/4.jpg', "High Horizon", "Elevated perspectives on depth.");
+                addArt(new THREE.Vector3(-15, 9.5, -10), Math.PI/2, 'assets/5.jpg', "Matte Memory", "Capturing non-shiny stillness.");
+                addArt(new THREE.Vector3(14, 9.5, -15), -Math.PI/2, 'assets/6.jpg', "Luminarium Final", "The peak of the duplex journey.");
+            },
+
+            setupLights() {
+                // Base Ambient
+                const amb = new THREE.AmbientLight(0x222233, 0.5);
+                this.scene.add(amb);
+
+                const hemi = new THREE.HemisphereLight(0xffffff, 0x000000, 0.4);
+                this.scene.add(hemi);
+
+                // Morphing Atmospheric Layers
+                const createAtmosphere = (col, pos) => {
+                    const light = new THREE.PointLight(col, 10, 50);
+                    light.position.copy(pos);
+                    this.scene.add(light);
+                    this.ambientLights.push({ light, base: pos.clone(), seed: Math.random() * 10 });
+                };
+
+                createAtmosphere(0x4400ff, new THREE.Vector3(-15, 12, -5));
+                createAtmosphere(0x0088ff, new THREE.Vector3(15, 12, 10));
+                createAtmosphere(0x8800ff, new THREE.Vector3(0, 14, -20));
+
+                // Focused Spotlights for Art
+                this.arts.forEach(art => {
+                    const spot = new THREE.SpotLight(0xffffff, 8);
+                    const normal = new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(0,1,0), art.ry);
+                    spot.position.copy(art.pos).add(normal.multiplyScalar(6)).add(new THREE.Vector3(0,6,0));
+                    spot.target.position.copy(art.pos);
+                    spot.angle = 0.6;
+                    spot.penumbra = 0.8;
+                    spot.castShadow = true;
+                    this.scene.add(spot, spot.target);
+                });
+            },
+
+            setupControls() {
+                this.input = { x: 0, y: 0, lastX: 0, lastY: 0, active: false, tapTime: 0 };
+                const cvs = this.renderer.domElement;
+
+                cvs.addEventListener('touchstart', e => {
+                    const t = e.touches[0];
+                    this.input.lastX = t.clientX; this.input.lastY = t.clientY;
+                    this.input.tapTime = Date.now();
+                    this.input.active = true;
+                    e.preventDefault();
+                }, {passive:false});
+
+                cvs.addEventListener('touchmove', e => {
+                    if(!this.input.active) return;
+                    const t = e.touches[0];
+                    const dx = t.clientX - this.input.lastX;
+                    const dy = t.clientY - this.input.lastY;
+                    
+                    // Smooth Rotation
+                    this.player.rot.y -= dx * 0.003;
+                    this.player.rot.x -= dy * 0.0025;
+                    this.player.rot.x = Math.max(-1.4, Math.min(1.4, this.player.rot.x));
+                    
+                    this.input.lastX = t.clientX; this.input.lastY = t.clientY;
+                }, {passive:false});
+
+                cvs.addEventListener('touchend', e => {
+                    const dur = Date.now() - this.input.tapTime;
+                    if(dur < 250) {
+                        const t = e.changedTouches[0];
+                        const mouse = new THREE.Vector2((t.clientX/window.innerWidth)*2-1, -(t.clientY/window.innerHeight)*2+1);
+                        this.raycaster.setFromCamera(mouse, this.camera);
+                        const hits = this.raycaster.intersectObjects(this.groundMeshes);
+                        if(hits.length > 0) {
+                            this.walkTo(hits[0].point);
+                        }
+                    }
+                    this.input.active = false;
+                });
+            },
+
+            walkTo(point) {
+                TWEEN.removeAll();
+                this.player.target.copy(point);
+                this.player.isWalking = true;
+                this.closeExhibit();
+            },
+
+            openExhibit(idx) {
+                const art = this.arts[idx];
+                this.currIdx = idx;
+                document.getElementById('art-title').innerText = art.title;
+                document.getElementById('art-desc').innerText = art.desc;
+                document.getElementById('art-display').classList.add('active');
+
+                // Human distance calculation for full viewport framing
+                // dist = (artHeight / 2) / tan(fov/2)
+                const normal = new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(0,1,0), art.ry);
+                const standPos = art.pos.clone().add(normal.multiplyScalar(6.8));
+                
+                new TWEEN.Tween(this.player.pos).to({x: standPos.x, z: standPos.z}, 2000).easing(TWEEN.Easing.Quadratic.InOut).start();
+                this.player.target.copy(standPos);
+
+                const startQ = this.camera.quaternion.clone();
+                this.camera.lookAt(art.pos);
+                const endQ = this.camera.quaternion.clone();
+                this.camera.quaternion.copy(startQ);
+
+                const qObj = { t: 0 };
+                new TWEEN.Tween(qObj).to({t:1}, 2000).easing(TWEEN.Easing.Quadratic.InOut).onUpdate(() => {
+                    THREE.Quaternion.slerp(startQ, endQ, this.camera.quaternion, qObj.t);
+                    const e = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
+                    this.player.rot.x = e.x; this.player.rot.y = e.y;
+                }).start();
+            },
+
+            closeExhibit() { document.getElementById('art-display').classList.remove('active'); },
+            nextExhibit() { this.openExhibit((this.currIdx + 1) % this.arts.length); },
+            resetPosition() { this.walkTo(new THREE.Vector3(0, 2, 20)); this.player.rot.set(0,0,0); },
+
+            checkCollision(pos) {
+                const pBox = new THREE.Box3().setFromCenterAndSize(pos, new THREE.Vector3(this.player.radius, 4, this.player.radius));
+                for(let b of this.colliders) {
+                    if(pBox.intersectsBox(b)) return true;
+                }
+                return false;
+            },
+
+            animate() {
+                requestAnimationFrame(this.animate.bind(this));
+                const delta = this.clock.getDelta();
+                const time = performance.now() * 0.001;
+                TWEEN.update();
+
+                // 1. Atmosphere Pulse
+                this.ambientLights.forEach(item => {
+                    item.light.position.x = item.base.x + Math.sin(time * 0.5 + item.seed) * 5;
+                    item.light.position.z = item.base.z + Math.cos(time * 0.5 + item.seed) * 5;
+                    item.light.intensity = 8 + Math.sin(time + item.seed) * 4;
+                });
+
+                // 2. Physics & Movement
+                const dist = this.player.pos.distanceTo(this.player.target);
+                if(dist > 0.1) {
+                    const dir = new THREE.Vector3().subVectors(this.player.target, this.player.pos);
+                    dir.y = 0; dir.normalize();
+                    const next = this.player.pos.clone().add(dir.multiplyScalar(0.16));
+                    if(!this.checkCollision(next)) {
+                        this.player.pos.x = next.x;
+                        this.player.pos.z = next.z;
+                    } else {
+                        this.player.target.copy(this.player.pos);
+                        this.player.isWalking = false;
+                    }
+                } else {
+                    this.player.isWalking = false;
+                }
+
+                // 3. Smooth Verticality (Zero Vibration)
+                this.downRay.set(new THREE.Vector3(this.player.pos.x, 100, this.player.pos.z), new THREE.Vector3(0,-1,0));
+                const hits = this.downRay.intersectObjects(this.groundMeshes);
+                if(hits.length > 0) {
+                    const targetY = hits[0].point.y + this.player.height;
+                    // Heavy lerp for staircase smoothness
+                    this.player.pos.y = THREE.MathUtils.lerp(this.player.pos.y, targetY, 0.1);
+                }
+
+                // 4. Biomechanical Bob
+                let bobPitch = 0;
+                if(this.player.isWalking) {
+                    this.player.bob += 0.22;
+                    bobPitch = Math.sin(this.player.bob) * 0.015;
+                } else {
+                    this.player.bob = 0;
+                }
+
+                // 5. Camera Apply
+                this.camera.position.copy(this.player.pos);
+                // Subtle look drift
+                const driftX = Math.sin(time * 0.3) * 0.0005;
+                const driftY = Math.cos(time * 0.4) * 0.0005;
+                this.camera.rotation.set(this.player.rot.x + bobPitch + driftX, this.player.rot.y + driftY, 0, 'YXZ');
+
+                // 6. UI Marker Projection
+                this.arts.forEach(art => {
+                    const d = this.player.pos.distanceTo(art.pos);
+                    const proj = art.pos.clone().project(this.camera);
+                    const isFacing = new THREE.Vector3(0,0,-1).applyQuaternion(this.camera.quaternion).dot(art.pos.clone().sub(this.player.pos).normalize()) > 0.5;
+                    if(d < 35 && isFacing) {
+                        art.el.style.left = (proj.x * 0.5 + 0.5) * window.innerWidth + 'px';
+                        art.el.style.top = (-(proj.y * 0.5) + 0.5) * window.innerHeight + 'px';
+                        art.el.classList.add('visible');
+                    } else {
+                        art.el.classList.remove('visible');
+                    }
+                });
+
+                this.renderer.render(this.scene, this.camera);
+            }
+        };
+
+        window.onload = () => App.init();
+        window.onresize = () => {
+            App.camera.aspect = window.innerWidth / window.innerHeight;
+            App.camera.updateProjectionMatrix();
+            App.renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+    </script>
+</body>
+</html>

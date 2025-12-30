@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Luminarium: The Ethereal Spiral</title>
+    <style>
+        :root { 
+            --gold: #d4af37; 
+            --electric-blue: #00d2ff;
+            --deep-purple: #240046;
+            --glass: rgba(10, 10, 20, 0.7); 
+            --blur: blur(20px);
+        }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #020205; font-family: 'Inter', sans-serif; touch-action: none; color: white; }
+        
+        canvas { display: block; width: 100vw; height: 100vh; }
+
+        /* UI Overlays */
+        #ui-container { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+        .interactive { pointer-events: auto; }
+
+        /* HUD */
+        .header {
+            position: absolute; top: 0; left: 0; width: 100%; padding: 30px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        }
+
+        .nav-controls {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 20px; align-items: center;
+        }
+
+        .glass-btn {
+            background: var(--glass);
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 15px 25px;
+            border-radius: 50px;
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .glass-btn:active { transform: scale(0.95); background: var(--gold); color: black; }
+
+        /* Art Labels (3D to 2D) */
+        .art-tag {
+            position: absolute;
+            width: 30px; height: 30px;
+            background: rgba(212, 175, 55, 0.8);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: bold; color: black;
+            transform: translate(-50%, -50%) scale(0);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+        }
+        .art-tag.visible { transform: translate(-50%, -50%) scale(1); }
+
+        /* Info Card */
+        #info-card {
+            position: absolute; right: 30px; top: 100px; width: 300px;
+            background: var(--glass); backdrop-filter: var(--blur);
+            border-radius: 20px; padding: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transform: translateX(350px);
+            transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        #info-card.active { transform: translateX(0); }
+        #info-card h2 { margin: 0 0 10px 0; font-size: 18px; color: var(--gold); }
+        #info-card p { margin: 0; font-size: 13px; line-height: 1.6; color: #ccc; }
+
+        #loading {
+            position: fixed; inset: 0; background: #020205;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 1000; transition: opacity 1s;
+        }
+        .loader-ring { width: 50px; height: 50px; border: 2px solid var(--deep-purple); border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="loading">
+        <div class="loader-ring"></div>
+        <p style="margin-top:20px; letter-spacing: 5px; font-size: 10px; opacity: 0.6;">ASCENDING TO LUMINARIUM</p>
+    </div>
+
+    <div id="ui-container">
+        <div class="header">
+            <div style="display:flex; flex-direction:column;">
+                <span style="letter-spacing:5px; font-weight:900; font-size:18px;">LUMINARIUM</span>
+                <span style="font-size:9px; color:var(--gold); letter-spacing:2px;">ETHEREAL SPIRAL EDITION</span>
+            </div>
+            <div class="glass-btn interactive" onclick="App.toggleAutoWalk()">Auto-Tour: <span id="tour-status">OFF</span></div>
+        </div>
+
+        <div id="info-card">
+            <h2 id="art-title">The First Spark</h2>
+            <p id="art-desc">An exploration of the digital genesis, where light first met logic.</p>
+        </div>
+
+        <div class="nav-controls">
+            <button class="glass-btn interactive" onclick="App.moveToNearest('prev')">Previous</button>
+            <button class="glass-btn interactive" onclick="App.moveToNearest('next')">Nearest Art</button>
+        </div>
+    </div>
+
+    <div id="marker-layer" style="position:absolute; inset:0; pointer-events:none;"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+    <script>
+        /**
+         * LUMINARIUM APP CORE
+         */
+        const App = {
+            // Environment
+            scene: null, camera: null, renderer: null,
+            clock: new THREE.Clock(),
+            
+            // Assets
+            arts: [],
+            walls: [],
+            
+            // Player Logic
+            player: {
+                pos: new THREE.Vector3(0, 1.7, 5),
+                rot: new THREE.Euler(0, 0, 0, 'YXZ'),
+                velocity: new THREE.Vector3(),
+                targetPos: null,
+                isMoving: false,
+                bob: 0,
+                height: 1.7,
+                lastStepTime: 0
+            },
+            
+            // States
+            autoTour: false,
+            currentArtIndex: -1,
+
+            init() {
+                this.setupScene();
+                this.buildMap();
+                this.setupLights();
+                this.setupInputs();
+                this.animate();
+
+                // Fade out loader
+                setTimeout(() => {
+                    document.getElementById('loading').style.opacity = 0;
+                    setTimeout(() => document.getElementById('loading').remove(), 1000);
+                }, 2000);
+            },
+
+            setupScene() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x020205);
+                this.scene.fog = new THREE.FogExp2(0x050010, 0.1);
+
+                this.camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.copy(this.player.pos);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                document.body.appendChild(this.renderer.domElement);
+            },
+
+            /**
+             * CREATIVE MAP DESIGN: THE SERPENTINE SPIRAL
+             * A flow that leads the user through curved corridors
+             */
+            buildMap() {
+                const floorMat = new THREE.MeshPhysicalMaterial({ 
+                    color: 0x0a0a10, roughness: 0.1, metalness: 0.5,
+                    clearcoat: 1.0, clearcoatRoughness: 0.1
+                });
+
+                // Floor
+                const floorGeo = new THREE.PlaneGeometry(100, 100);
+                const floor = new THREE.Mesh(floorGeo, floorMat);
+                floor.rotation.x = -Math.PI / 2;
+                floor.receiveShadow = true;
+                this.scene.add(floor);
+
+                // Walls Construction - We create an "S" shaped layout
+                const wallMat = new THREE.MeshStandardMaterial({ color: 0x11111b, roughness: 0.9 });
+                
+                const createWall = (x, z, w, h, ry, artData = null) => {
+                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.5), wallMat);
+                    mesh.position.set(x, h/2, z);
+                    mesh.rotation.y = ry;
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                    this.scene.add(mesh);
+                    this.walls.push(mesh);
+
+                    if(artData) {
+                        this.addArtToWall(mesh, artData);
+                    }
+                };
+
+                // The Entry Void
+                createWall(0, -5, 10, 5, 0); 
+                
+                // The S-Curve Section 1
+                createWall(-5, 0, 12, 5, Math.PI/2, { title: "Nebula Dreams", desc: "A capture of distant cosmic dust clouds." });
+                createWall(5, 5, 12, 5, Math.PI/2, { title: "Digital Silence", desc: "Minimalist study of pure white pixels." });
+                
+                // The Turn
+                createWall(0, 11, 10, 5, 0, { title: "Golden Ratio", desc: "The intersection of nature and math." });
+                
+                // Section 2 - The Long Corridor
+                createWall(-10, 15, 10, 5, Math.PI/2, { title: "The Deep", desc: "Bioluminescent life in the midnight zone." });
+                createWall(10, 18, 14, 5, -Math.PI/4, { title: "Prism", desc: "Refractions of light through synthetic glass." });
+
+                // The Sanctum
+                createWall(0, 25, 15, 6, 0.2, { title: "Zenith", desc: "The ultimate point of visual clarity." });
+            },
+
+            addArtToWall(wall, data) {
+                const artGeo = new THREE.PlaneGeometry(3, 2);
+                const artMat = new THREE.MeshStandardMaterial({ 
+                    emissive: 0xffffff,
+                    emissiveIntensity: 0.1,
+                    map: this.generateArtTexture()
+                });
+                const art = new THREE.Mesh(artGeo, artMat);
+                
+                // Position slightly in front of wall
+                art.position.z = 0.3;
+                wall.add(art);
+
+                // Add Spotlight for this art
+                const spot = new THREE.SpotLight(0xffd700, 5, 10, 0.5, 1, 2);
+                spot.position.set(0, 4, 3);
+                spot.target = art;
+                wall.add(spot);
+
+                // Store in arts array
+                const worldPos = new THREE.Vector3();
+                art.getWorldPosition(worldPos);
+                
+                // Offset viewing position
+                const viewDir = new THREE.Vector3(0, 0, 4).applyQuaternion(wall.quaternion);
+                const viewPos = worldPos.clone().add(viewDir);
+                viewPos.y = this.player.height;
+
+                const artObj = {
+                    id: this.arts.length,
+                    title: data.title,
+                    desc: data.desc,
+                    pos: worldPos,
+                    viewPos: viewPos,
+                    wall: wall,
+                    marker: this.createMarker(this.arts.length)
+                };
+                this.arts.push(artObj);
+            },
+
+            generateArtTexture() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512; canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                const grad = ctx.createLinearGradient(0, 0, 512, 512);
+                grad.addColorStop(0, '#240046');
+                grad.addColorStop(0.5, '#3c096c');
+                grad.addColorStop(1, '#00d2ff');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0,0,512,512);
+                // Add some techy lines
+                ctx.strokeStyle = "rgba(255,255,255,0.1)";
+                for(let i=0; i<20; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(Math.random()*512, 0);
+                    ctx.lineTo(Math.random()*512, 512);
+                    ctx.stroke();
+                }
+                return new THREE.CanvasTexture(canvas);
+            },
+
+            createMarker(id) {
+                const el = document.createElement('div');
+                el.className = 'art-tag';
+                el.innerText = id + 1;
+                el.onclick = () => this.focusArt(id);
+                document.getElementById('marker-layer').appendChild(el);
+                return el;
+            },
+
+            setupLights() {
+                // Bluish Ambient
+                const amb = new THREE.HemisphereLight(0x00d2ff, 0x240046, 0.4);
+                this.scene.add(amb);
+
+                // Purplish Diffused Accent Lights
+                const p1 = new THREE.PointLight(0x3c096c, 10, 30);
+                p1.position.set(-10, 5, 5);
+                this.scene.add(p1);
+
+                const p2 = new THREE.PointLight(0x00d2ff, 5, 30);
+                p2.position.set(10, 5, 20);
+                this.scene.add(p2);
+            },
+
+            setupInputs() {
+                window.addEventListener('mousedown', (e) => this.onInteraction(e.clientX, e.clientY));
+                window.addEventListener('touchstart', (e) => this.onInteraction(e.touches[0].clientX, e.touches[0].clientY));
+                
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            },
+
+            onInteraction(x, y) {
+                if (this.autoTour) this.toggleAutoWalk();
+
+                // Raycast for floor movement
+                const mouse = new THREE.Vector2((x/window.innerWidth)*2-1, -(y/window.innerHeight)*2+1);
+                const ray = new THREE.Raycaster();
+                ray.setFromCamera(mouse, this.camera);
+                
+                const floorHit = ray.intersectObject(this.scene.children[0]); // Plane
+                if (floorHit.length > 0) {
+                    this.walkTo(floorHit[0].point);
+                }
+            },
+
+            /**
+             * HUMAN-LIKE MOTION SYSTEM
+             */
+            walkTo(point) {
+                this.player.targetPos = point.clone();
+                this.player.targetPos.y = this.player.height;
+                this.player.isMoving = true;
+                
+                // Natural gaze: Look where you're going
+                const lookTarget = point.clone();
+                lookTarget.y = this.player.height;
+                
+                // Smooth camera rotation to face direction
+                const dummy = new THREE.Object3D();
+                dummy.position.copy(this.player.pos);
+                dummy.lookAt(lookTarget);
+                
+                new TWEEN.Tween(this.camera.quaternion)
+                    .to(dummy.quaternion, 1000)
+                    .easing(TWEEN.Easing.Quadratic.Out)
+                    .start();
+            },
+
+            moveToNearest(dir) {
+                let nearest = null;
+                let minDist = Infinity;
+
+                this.arts.forEach((art, idx) => {
+                    if (idx === this.currentArtIndex) return;
+                    const d = this.player.pos.distanceTo(art.pos);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearest = idx;
+                    }
+                });
+
+                if (nearest !== null) this.focusArt(nearest);
+            },
+
+            focusArt(id) {
+                const art = this.arts[id];
+                this.currentArtIndex = id;
+                this.autoTour = false;
+
+                // Move to view position
+                this.walkTo(art.viewPos);
+
+                // Show Info
+                const card = document.getElementById('info-card');
+                card.classList.add('active');
+                document.getElementById('art-title').innerText = art.title;
+                document.getElementById('art-desc').innerText = art.desc;
+
+                // Close card after a while or on move
+                this.player.onMoveStart = () => card.classList.remove('active');
+            },
+
+            toggleAutoWalk() {
+                this.autoTour = !this.autoTour;
+                document.getElementById('tour-status').innerText = this.autoTour ? "ON" : "OFF";
+                if (this.autoTour) this.moveToNearest('next');
+            },
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                const delta = this.clock.getDelta();
+                const time = this.clock.getElapsedTime();
+                TWEEN.update();
+
+                this.handleMovement(delta, time);
+                this.updateMarkers();
+                this.renderer.render(this.scene, this.camera);
+            },
+
+            handleMovement(delta, time) {
+                if (this.player.isMoving && this.player.targetPos) {
+                    const dist = this.player.pos.distanceTo(this.player.targetPos);
+                    
+                    if (dist < 0.1) {
+                        this.player.isMoving = false;
+                        this.player.targetPos = null;
+                        this.player.velocity.set(0,0,0);
+                    } else {
+                        // Human-like speed curve
+                        const speed = Math.min(dist * 2, 3.5);
+                        const dir = new THREE.Vector3().subVectors(this.player.targetPos, this.player.pos).normalize();
+                        this.player.pos.add(dir.multiplyScalar(speed * delta));
+                        
+                        // Head Bobbing logic
+                        this.player.bob += delta * (speed * 2.5);
+                        const bobAmount = Math.sin(this.player.bob) * 0.03;
+                        this.player.pos.y = this.player.height + bobAmount;
+
+                        // Subtle camera sway
+                        this.camera.rotation.z = Math.sin(this.player.bob * 0.5) * 0.01;
+                    }
+                } else {
+                    // Idle breathing
+                    this.player.pos.y = this.player.height + Math.sin(time * 1.5) * 0.005;
+                }
+
+                this.camera.position.copy(this.player.pos);
+            },
+
+            updateMarkers() {
+                this.arts.forEach(art => {
+                    const vector = art.pos.clone().project(this.camera);
+                    const dist = this.camera.position.distanceTo(art.pos);
+                    
+                    // Visible only if in front and within range
+                    if (vector.z < 1 && dist < 15) {
+                        const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+                        const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+                        art.marker.style.left = `${x}px`;
+                        art.marker.style.top = `${y}px`;
+                        art.marker.classList.add('visible');
+                        art.marker.style.opacity = 1 - (dist / 15);
+                    } else {
+                        art.marker.classList.remove('visible');
+                    }
+                });
+            }
+        };
+
+        window.onload = () => App.init();
+    </script>
+</body>
+</html>

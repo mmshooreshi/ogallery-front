@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>Luminarium: Luxury Edition</title>
+    <style>
+        /* --- CORE UI --- */
+        body { 
+            margin: 0; overflow: hidden; background-color: #111; 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            touch-action: none; /* Critical for mobile game feel */
+        }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        
+        /* Loading Overlay */
+        #loader {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #1a1a1a; color: #d4af37; /* Gold */
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 1000; transition: opacity 0.8s;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid #d4af37;
+            border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* UI Layer */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            position: absolute; top: 0; left: 0; width: 100%;
+            padding: 15px; box-sizing: border-box;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            pointer-events: auto;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        }
+
+        .mode-toggle {
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            display: flex; padding: 4px;
+        }
+        .mode-btn {
+            background: transparent; border: none; color: #aaa;
+            padding: 8px 16px; border-radius: 24px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: 0.3s;
+        }
+        .mode-btn.active { background: #d4af37; color: #000; box-shadow: 0 2px 10px rgba(212, 175, 55, 0.3); }
+
+        .settings-btn {
+            background: rgba(0,0,0,0.5); color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; cursor: pointer;
+        }
+
+        /* Bottom Controls (Light Studio) - Slide Up Design */
+        #studio-panel {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: rgba(15, 15, 15, 0.9);
+            backdrop-filter: blur(15px);
+            border-top: 1px solid #333;
+            transform: translateY(110%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: auto;
+            display: flex; flex-direction: column;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+        }
+        #studio-panel.visible { transform: translateY(0); }
+
+        .studio-header {
+            padding: 10px 15px; border-bottom: 1px solid #333;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .studio-views { display: flex; gap: 8px; }
+        .view-chip {
+            background: #222; border: 1px solid #444; color: #888;
+            padding: 4px 12px; border-radius: 12px; font-size: 11px;
+            cursor: pointer;
+        }
+        .view-chip.active { background: #eee; color: #000; border-color: #fff; }
+
+        /* Scrollable Light Selector */
+        .light-strip {
+            display: flex; overflow-x: auto; gap: 12px; padding: 15px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+        }
+        .light-strip::-webkit-scrollbar { display: none; }
+        
+        .light-node {
+            min-width: 50px; height: 50px; border-radius: 12px;
+            background: #222; border: 2px solid #444;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #666; font-size: 10px; cursor: pointer;
+            transition: 0.2s; position: relative;
+        }
+        .light-node.active { border-color: #d4af37; background: #332a10; color: #d4af37; transform: translateY(-2px); }
+        .light-node span { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
+
+        /* Slider Grid */
+        .controls-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+            padding: 0 15px 20px 15px;
+        }
+        .slider-group { display: flex; flex-direction: column; gap: 6px; }
+        .slider-label { display: flex; justify-content: space-between; color: #aaa; font-size: 11px; }
+        
+        input[type=range] {
+            width: 100%; -webkit-appearance: none; background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #d4af37; margin-top: -6px; box-shadow: 0 0 10px rgba(212,175,55,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; background: #444; border-radius: 2px;
+        }
+
+        /* Visual Feedback for Taps */
+        .tap-ripple {
+            position: absolute; border: 2px solid #fff; border-radius: 50%;
+            width: 20px; height: 20px; pointer-events: none;
+            animation: ripple 0.6s ease-out forwards; opacity: 0;
+        }
+        @keyframes ripple {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(4); opacity: 0; }
+        }
+
+        /* Instructions Toast */
+        .toast {
+            position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.7); color: #fff; padding: 10px 20px;
+            border-radius: 20px; font-size: 12px; pointer-events: none; opacity: 0.8;
+            transition: opacity 0.5s; text-align: center; width: 80%;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <div>Finishing Luxury Textures...</div>
+    </div>
+
+    <!-- 3D Canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- UI -->
+    <div id="ui-layer">
+        <div class="top-bar">
+            <div class="mode-toggle">
+                <button class="mode-btn active" onclick="app.setMode('walk')">WALK</button>
+                <button class="mode-btn" onclick="app.setMode('studio')">STUDIO</button>
+            </div>
+            <button class="settings-btn" onclick="app.toggleAxis()">⇄</button>
+        </div>
+
+        <div class="toast" id="instruction-toast">
+            Left: Walk • Right: Look • Tap Floor: Auto-Walk
+        </div>
+
+        <!-- Studio Panel (Bottom Dock) -->
+        <div id="studio-panel">
+            <div class="studio-header">
+                <span style="color:#fff; font-size:12px; font-weight:bold; letter-spacing:1px;">LIGHT CONSOLE</span>
+                <div class="studio-views">
+                    <div class="view-chip active" onclick="app.setView('pov')">POV</div>
+                    <div class="view-chip" onclick="app.setView('iso')">ISO</div>
+                    <div class="view-chip" onclick="app.setView('front')">FRONT</div>
+                </div>
+            </div>
+
+            <!-- Light Selector -->
+            <div class="light-strip" id="light-strip">
+                <!-- Generated JS -->
+            </div>
+
+            <div class="controls-grid">
+                <div class="slider-group">
+                    <div class="slider-label"><span>INTENSITY</span><span id="lbl-int">1.0</span></div>
+                    <input type="range" min="0" max="3" step="0.1" id="sl-int" oninput="app.updateLightParam('intensity', this.value)">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label"><span>WARMTH</span><span id="lbl-hue">Warm</span></div>
+                    <input type="range" min="0" max="60" step="1" id="sl-hue" oninput="app.updateLightParam('color', this.value)">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label"><span>FOCUS</span><span id="lbl-ang">30°</span></div>
+                    <input type="range" min="0.1" max="0.8" step="0.05" id="sl-ang" oninput="app.updateLightParam('angle', this.value)">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label"><span>SOFTNESS</span><span id="lbl-pen">0.5</span></div>
+                    <input type="range" min="0" max="1" step="0.05" id="sl-pen" oninput="app.updateLightParam('penumbra', this.value)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- LUXURY TEXTURE GENERATOR ---
+        const TextureGen = {
+            createCanvas: (w, h) => {
+                const c = document.createElement('canvas');
+                c.width = w; c.height = h;
+                return { c, ctx: c.getContext('2d') };
+            },
+            
+            // Rich Mahogany Wood
+            wood: () => {
+                const size = 1024;
+                const { c, ctx } = TextureGen.createCanvas(size, size);
+                
+                // Base
+                ctx.fillStyle = '#3e2723'; // Dark brown
+                ctx.fillRect(0,0,size,size);
+                
+                // Grain
+                ctx.globalAlpha = 0.15;
+                ctx.strokeStyle = '#000';
+                for(let i=0; i<size; i+=2) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, i);
+                    // Wavy lines
+                    ctx.bezierCurveTo(size/3, i + (Math.random()-0.5)*50, size/1.5, i + (Math.random()-0.5)*50, size, i);
+                    ctx.stroke();
+                }
+                
+                // Planks
+                ctx.globalAlpha = 0.3;
+                ctx.strokeStyle = '#1a100c';
+                ctx.lineWidth = 2;
+                for(let i=0; i<size; i+=128) { // Plank width
+                    ctx.beginPath();
+                    ctx.moveTo(0, i);
+                    ctx.lineTo(size, i);
+                    ctx.stroke();
+                }
+
+                // Varnish Highlight (Fake reflection baked in slightly for texture)
+                const tex = new THREE.CanvasTexture(c);
+                tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+                tex.repeat.set(4, 4);
+                return tex;
+            },
+
+            // Venetian Plaster
+            plaster: () => {
+                const size = 1024;
+                const { c, ctx } = TextureGen.createCanvas(size, size);
+                
+                // Base Cream
+                ctx.fillStyle = '#eaddcf'; 
+                ctx.fillRect(0,0,size,size);
+                
+                // Trowel marks
+                for(let i=0; i<200; i++) {
+                    ctx.fillStyle = Math.random() > 0.5 ? '#f5ebe0' : '#d7c4b6';
+                    ctx.globalAlpha = 0.1;
+                    ctx.beginPath();
+                    const x = Math.random()*size, y = Math.random()*size;
+                    const r = 50 + Math.random()*100;
+                    ctx.arc(x, y, r, 0, Math.PI*2);
+                    ctx.fill();
+                }
+                
+                const tex = new THREE.CanvasTexture(c);
+                tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+                tex.repeat.set(2, 1);
+                return tex;
+            }
+        };
+
+        // --- APP ENGINE ---
+        class App {
+            constructor() {
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.player = { 
+                    pos: new THREE.Vector3(0, 1.6, 10), 
+                    rot: new THREE.Euler(0, 0, 0, 'YXZ'),
+                    targetPos: null // For auto-walk
+                };
+                this.lights = []; // Projectors
+                this.mode = 'walk'; // walk | studio
+                this.view = 'pov';
+                this.selectedLight = 0;
+                this.invertX = true; // "Reverse of what u may do"
+                
+                // Input State
+                this.inputs = {
+                    leftDrag: { active: false, x: 0, y: 0, originX: 0, originY: 0 },
+                    rightDrag: { active: false, x: 0, y: 0, originX: 0, originY: 0 }
+                };
+                
+                this.raycaster = new THREE.Raycaster();
+                this.floorPlane = null;
+
+                this.init();
+            }
+
+            init() {
+                // 1. Setup Three.js
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x222222);
+                this.scene.fog = new THREE.FogExp2(0x222222, 0.015);
+
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+                
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.renderer.outputEncoding = THREE.sRGBEncoding;
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                this.renderer.toneMappingExposure = 1.2; // Brighter overall
+                document.body.appendChild(this.renderer.domElement);
+
+                // 2. Build Scene
+                this.buildArchitecture();
+                this.setupLighting();
+
+                // 3. Inputs
+                this.setupInputs();
+
+                // 4. Loop
+                this.animate = this.animate.bind(this);
+                requestAnimationFrame(this.animate);
+
+                // 5. Hide Loader
+                setTimeout(() => document.getElementById('loader').style.opacity = 0, 500);
+                setTimeout(() => document.getElementById('loader').remove(), 1500);
+                
+                // 6. Init UI
+                this.renderLightStrip();
+            }
+
+            buildArchitecture() {
+                // Materials
+                const woodTex = TextureGen.wood();
+                const wallTex = TextureGen.plaster();
+                
+                const floorMat = new THREE.MeshStandardMaterial({ 
+                    map: woodTex, roughness: 0.1, metalness: 0.1 
+                }); // Shiny floor
+                
+                const wallMat = new THREE.MeshStandardMaterial({ 
+                    map: wallTex, roughness: 0.8, color: 0xffffff 
+                });
+
+                // Floor
+                const floorGeo = new THREE.PlaneGeometry(60, 60);
+                this.floorPlane = new THREE.Mesh(floorGeo, floorMat); // Keep ref for Raycast
+                this.floorPlane.rotation.x = -Math.PI/2;
+                this.floorPlane.receiveShadow = true;
+                this.scene.add(this.floorPlane);
+
+                // Ceiling (White, clean)
+                const ceil = new THREE.Mesh(new THREE.PlaneGeometry(60,60), new THREE.MeshBasicMaterial({color:0xeeeeee}));
+                ceil.rotation.x = Math.PI/2;
+                ceil.position.y = 8;
+                this.scene.add(ceil);
+
+                // Walls (Modern Gallery)
+                const addWall = (x, z, w, d, h) => {
+                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+                    mesh.position.set(x, h/2, z);
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                    this.scene.add(mesh);
+                };
+
+                addWall(0, -20, 50, 1, 8); // Back
+                addWall(-25, 0, 1, 40, 8); // Left
+                addWall(25, 0, 1, 40, 8); // Right
+                addWall(0, 20, 50, 1, 8); // Front
+                
+                // Dividers
+                addWall(-10, -5, 1, 15, 8);
+                addWall(10, 5, 1, 15, 8);
+                
+                // Art Pedestals (to give context)
+                const pedGeo = new THREE.BoxGeometry(1, 1.2, 1);
+                const pedMat = new THREE.MeshStandardMaterial({color: 0x111, roughness: 0.2});
+                [[-5, -10], [5, 10], [0, 0]].forEach(([x,z]) => {
+                    const p = new THREE.Mesh(pedGeo, pedMat);
+                    p.position.set(x, 0.6, z);
+                    p.castShadow = true;
+                    this.scene.add(p);
+                });
+            }
+
+            setupLighting() {
+                // Global "Daylight" ambiance (Not dark anymore!)
+                const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffeedd, 0.6);
+                this.scene.add(hemiLight);
+
+                // 10 Projectors
+                const positions = [
+                    {x:0, z:0}, {x:-5, z:-10}, {x:5, z:10}, {x:-15, z:0}, {x:15, z:0},
+                    {x:0, z:-18}, {x:0, z:18}, {x:-10, z:10}, {x:10, z:-10}, {x:0, z:12}
+                ];
+
+                positions.forEach((pos, i) => {
+                    // Physical fixture
+                    const fix = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.15, 0.15, 0.5), 
+                        new THREE.MeshStandardMaterial({color:0x222})
+                    );
+                    fix.position.set(pos.x, 7.8, pos.z);
+                    this.scene.add(fix);
+
+                    // Spot
+                    const spot = new THREE.SpotLight(0xffeeb1, 1.5);
+                    spot.position.copy(fix.position);
+                    spot.angle = 0.5;
+                    spot.penumbra = 0.5;
+                    spot.decay = 1.8;
+                    spot.distance = 40;
+                    spot.castShadow = true;
+                    spot.shadow.bias = -0.0001;
+                    this.scene.add(spot);
+
+                    // Target
+                    const target = new THREE.Object3D();
+                    target.position.set(pos.x + 0.1, 0, pos.z + 0.1); // Aim down initially
+                    this.scene.add(target);
+                    spot.target = target;
+
+                    // Helper
+                    const helper = new THREE.SpotLightHelper(spot, 0xd4af37);
+                    helper.visible = false;
+                    this.scene.add(helper);
+
+                    this.lights.push({ id: i, light: spot, target, helper, mesh: fix });
+                });
+            }
+
+            setupInputs() {
+                const onTouch = (e, type) => {
+                    // Prevent default to stop scrolling
+                    if(e.target.tagName !== 'INPUT') e.preventDefault();
+                    
+                    const touches = e.changedTouches;
+                    const w = window.innerWidth;
+                    const h = window.innerHeight;
+
+                    for(let i=0; i<touches.length; i++) {
+                        const t = touches[i];
+                        const side = t.clientX < w / 2 ? 'left' : 'right';
+                        
+                        // TAP DETECTION (Short duration, low movement)
+                        if(type === 'start') {
+                            t.startTime = Date.now();
+                            t.startX = t.clientX;
+                            t.startY = t.clientY;
+                        }
+
+                        if(type === 'end') {
+                            const dur = Date.now() - t.startTime;
+                            const dist = Math.hypot(t.clientX - t.startX, t.clientY - t.startY);
+                            
+                            // If it was a quick tap (<300ms) and didn't move much
+                            if(dur < 300 && dist < 10 && this.mode === 'walk') {
+                                this.handleTapWalk(t.clientX, t.clientY);
+                                // Clear inputs just in case
+                                this.inputs.leftDrag.active = false;
+                                this.inputs.rightDrag.active = false;
+                                return;
+                            }
+                        }
+
+                        // DRAG LOGIC
+                        if (side === 'left') {
+                            if(type === 'start') {
+                                this.inputs.leftDrag = { active: true, originX: t.clientX, originY: t.clientY, x:0, y:0 };
+                            } else if (type === 'move' && this.inputs.leftDrag.active) {
+                                const dx = t.clientX - this.inputs.leftDrag.originX;
+                                const dy = t.clientY - this.inputs.leftDrag.originY;
+                                // Normalize -1 to 1 (max drag 60px)
+                                this.inputs.leftDrag.x = Math.max(-1, Math.min(1, dx/60));
+                                this.inputs.leftDrag.y = Math.max(-1, Math.min(1, dy/60));
+                            } else if (type === 'end') {
+                                this.inputs.leftDrag.active = false;
+                                this.inputs.leftDrag.x = 0; 
+                                this.inputs.leftDrag.y = 0;
+                            }
+                        } else {
+                            if(type === 'start') {
+                                this.inputs.rightDrag = { active: true, originX: t.clientX, originY: t.clientY, x:0, y:0 };
+                            } else if (type === 'move' && this.inputs.rightDrag.active) {
+                                const dx = t.clientX - this.inputs.rightDrag.originX;
+                                const dy = t.clientY - this.inputs.rightDrag.originY;
+                                
+                                // Direct rotation
+                                this.player.rot.y -= dx * 0.005;
+                                this.player.rot.x -= dy * 0.005;
+                                this.player.rot.x = Math.max(-1.5, Math.min(1.5, this.player.rot.x));
+                                
+                                // Reset origin for relative delta
+                                this.inputs.rightDrag.originX = t.clientX;
+                                this.inputs.rightDrag.originY = t.clientY;
+                            } else if (type === 'end') {
+                                this.inputs.rightDrag.active = false;
+                            }
+                        }
+                    }
+                };
+
+                document.addEventListener('touchstart', e => onTouch(e, 'start'), {passive:false});
+                document.addEventListener('touchmove', e => onTouch(e, 'move'), {passive:false});
+                document.addEventListener('touchend', e => onTouch(e, 'end'), {passive:false});
+                
+                // Desktop Mouse fallback
+                let isMouseDown = false;
+                document.addEventListener('mousedown', e => {
+                     // Check if clicking UI
+                    if(e.target.closest('#studio-panel') || e.target.closest('.top-bar')) return;
+                    
+                    isMouseDown = true;
+                    // Simulate right drag look
+                });
+                document.addEventListener('mousemove', e => {
+                    if(!isMouseDown) return;
+                    this.player.rot.y -= e.movementX * 0.002;
+                    this.player.rot.x -= e.movementY * 0.002;
+                    this.player.rot.x = Math.max(-1.5, Math.min(1.5, this.player.rot.x));
+                });
+                document.addEventListener('mouseup', () => { 
+                    isMouseDown = false;
+                    // Tap check for desktop
+                    this.handleTapWalk(event.clientX, event.clientY);
+                });
+            }
+
+            handleTapWalk(x, y) {
+                // Raycast to floor
+                const mouse = new THREE.Vector2();
+                mouse.x = (x / window.innerWidth) * 2 - 1;
+                mouse.y = -(y / window.innerHeight) * 2 + 1;
+
+                this.raycaster.setFromCamera(mouse, this.camera);
+                const intersects = this.raycaster.intersectObject(this.floorPlane);
+
+                if(intersects.length > 0) {
+                    const point = intersects[0].point;
+                    this.player.targetPos = new THREE.Vector3(point.x, 1.6, point.z);
+                    this.createRipple(x, y);
+                }
+            }
+
+            createRipple(x, y) {
+                const rip = document.createElement('div');
+                rip.className = 'tap-ripple';
+                rip.style.left = (x - 10) + 'px';
+                rip.style.top = (y - 10) + 'px';
+                document.body.appendChild(rip);
+                setTimeout(() => rip.remove(), 600);
+            }
+
+            // --- LOGIC ---
+
+            setMode(m) {
+                this.mode = m;
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                event.target.classList.add('active');
+                
+                const panel = document.getElementById('studio-panel');
+                const toast = document.getElementById('instruction-toast');
+                
+                if(m === 'studio') {
+                    panel.classList.add('visible');
+                    toast.style.opacity = 0;
+                    this.lights[this.selectedLight].helper.visible = true;
+                    this.setView(this.view); // snap to last view
+                } else {
+                    panel.classList.remove('visible');
+                    toast.style.opacity = 0.8;
+                    this.lights.forEach(l => l.helper.visible = false);
+                }
+            }
+            
+            toggleAxis() {
+                this.invertX = !this.invertX;
+                const btn = document.querySelector('.settings-btn');
+                btn.style.background = this.invertX ? '#d4af37' : 'rgba(0,0,0,0.5)';
+                btn.style.color = this.invertX ? '#000' : '#fff';
+            }
+
+            setView(v) {
+                this.view = v;
+                document.querySelectorAll('.view-chip').forEach(c => c.classList.remove('active'));
+                event.target.classList.add('active');
+            }
+
+            selectLight(id) {
+                this.lights[this.selectedLight].helper.visible = false;
+                this.selectedLight = id;
+                this.lights[this.selectedLight].helper.visible = true;
+                
+                // Update UI Chips
+                document.querySelectorAll('.light-node').forEach((n, i) => {
+                    n.classList.toggle('active', i === id);
+                });
+                
+                // Update Sliders
+                const l = this.lights[id].light;
+                document.getElementById('sl-int').value = l.intensity;
+                document.getElementById('lbl-int').innerText = l.intensity.toFixed(1);
+                // Simple Hue extract not accurate but ok for UI
+                document.getElementById('sl-pen').value = l.penumbra;
+                document.getElementById('lbl-pen').innerText = l.penumbra.toFixed(2);
+                document.getElementById('sl-ang').value = l.angle;
+                document.getElementById('lbl-ang').innerText = (l.angle*57).toFixed(0)+'°';
+            }
+
+            renderLightStrip() {
+                const strip = document.getElementById('light-strip');
+                strip.innerHTML = '';
+                this.lights.forEach((l, i) => {
+                    const node = document.createElement('div');
+                    node.className = `light-node ${i===0?'active':''}`;
+                    node.innerHTML = `<span>${i+1}</span>`;
+                    node.onclick = () => this.selectLight(i);
+                    strip.appendChild(node);
+                });
+            }
+
+            updateLightParam(param, val) {
+                const l = this.lights[this.selectedLight].light;
+                val = parseFloat(val);
+                
+                if(param === 'intensity') {
+                    l.intensity = val;
+                    document.getElementById('lbl-int').innerText = val.toFixed(1);
+                }
+                if(param === 'color') {
+                    // val is 0-60 (warm hues)
+                    const hue = (60 - val) / 360; // 0 is yellow/red, 60 is more red/white?
+                    // Map slider 0-60 to Hue 50 (Gold) -> 10 (Red/Warm)
+                    const h = (50 - (val/60)*40)/360; 
+                    l.color.setHSL(h, 1, 0.6);
+                    this.lights[this.selectedLight].helper.color = l.color;
+                    document.getElementById('lbl-hue').innerText = val;
+                }
+                if(param === 'angle') {
+                    l.angle = val;
+                    document.getElementById('lbl-ang').innerText = (val*57).toFixed(0)+'°';
+                }
+                if(param === 'penumbra') {
+                    l.penumbra = val;
+                    document.getElementById('lbl-pen').innerText = val.toFixed(2);
+                }
+                this.lights[this.selectedLight].helper.update();
+            }
+
+            animate() {
+                requestAnimationFrame(this.animate);
+                
+                if(this.mode === 'walk') {
+                    // 1. Manual Move (Joystick)
+                    if (this.inputs.leftDrag.active) {
+                        this.player.targetPos = null; // Cancel auto-walk
+                        
+                        const speed = 0.15;
+                        const yaw = this.player.rot.y;
+                        
+                        // "Left right reversed" logic
+                        // Standard: Left stick X- = Move Left. 
+                        // If invertX is true, Left stick X- = Move Right.
+                        let dirX = this.inputs.leftDrag.x;
+                        if(this.invertX) dirX = -dirX; 
+                        
+                        const forward = -this.inputs.leftDrag.y;
+                        
+                        const dx = Math.sin(yaw) * forward + Math.cos(yaw) * dirX;
+                        const dz = Math.cos(yaw) * forward - Math.sin(yaw) * dirX;
+                        
+                        this.player.pos.x += dx * speed;
+                        this.player.pos.z += dz * speed;
+                    } 
+                    // 2. Auto Walk (Tap)
+                    else if (this.player.targetPos) {
+                        const dist = this.player.pos.distanceTo(this.player.targetPos);
+                        if(dist < 0.2) {
+                            this.player.targetPos = null;
+                        } else {
+                            const dir = new THREE.Vector3().subVectors(this.player.targetPos, this.player.pos).normalize();
+                            this.player.pos.add(dir.multiplyScalar(0.12)); // Smooth glide
+                        }
+                    }
+
+                    // Apply to Camera
+                    this.camera.position.copy(this.player.pos);
+                    this.camera.rotation.copy(this.player.rot);
+                } else {
+                    // Studio Mode Camera
+                    const l = this.lights[this.selectedLight];
+                    const target = l.target.position;
+                    const pos = l.light.position;
+                    
+                    if(this.view === 'pov') {
+                        this.camera.position.set(pos.x, pos.y-0.5, pos.z);
+                        this.camera.lookAt(target);
+                    } else if (this.view === 'iso') {
+                        this.camera.position.set(pos.x+8, pos.y+5, pos.z+8);
+                        this.camera.lookAt(target);
+                    } else if (this.view === 'front') {
+                        // Position camera behind target looking at light? Or front of light?
+                        // "Front" usually means looking AT the light source
+                        this.camera.position.set(target.x, target.y+1, target.z);
+                        this.camera.lookAt(pos);
+                    }
+                    
+                    l.helper.update();
+                }
+
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // Boot
+        const app = new App();
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            app.camera.aspect = window.innerWidth/window.innerHeight;
+            app.camera.updateProjectionMatrix();
+            app.renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>

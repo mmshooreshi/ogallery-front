@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LUMINARIUM • INFINITE</title>
+    <style>
+        :root { 
+            --gold: #e5c07b; 
+            --accent: #61afef;
+            --bg: #020202;
+            --glass: rgba(10, 10, 10, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+            --font: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; overflow: hidden; background: var(--bg); font-family: var(--font); color: white; user-select: none; }
+        
+        canvas { display: block; width: 100vw; height: 100vh; }
+
+        /* --- UI OVERLAY --- */
+        #ui-layer { position: absolute; inset: 0; pointer-events: none; z-index: 100; display: flex; flex-direction: column; }
+        .pointer-auto { pointer-events: auto; }
+
+        /* --- HUD --- */
+        .hud-top { padding: 30px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .brand { font-size: 12px; letter-spacing: 0.5em; font-weight: 800; color: var(--gold); text-transform: uppercase; }
+        
+        .control-group { display: flex; gap: 12px; }
+        .btn-circle {
+            width: 50px; height: 50px; border-radius: 50%; background: var(--glass);
+            border: 1px solid var(--border); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            transition: 0.3s cubic-bezier(0.2, 0, 0, 1); color: white;
+        }
+        .btn-circle:hover { transform: scale(1.1); background: rgba(255,255,255,0.1); border-color: var(--gold); }
+        .btn-circle.active { color: var(--gold); border-color: var(--gold); box-shadow: 0 0 20px rgba(229, 192, 123, 0.2); }
+
+        /* --- ART CARD --- */
+        .art-card {
+            position: absolute; bottom: 40px; left: 40px; width: 420px;
+            background: var(--glass); border: 1px solid var(--border); border-radius: 24px;
+            backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            padding: 32px; transform: translateY(150%) scale(0.9); transition: 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            opacity: 0; visibility: hidden;
+        }
+        .art-card.active { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+        
+        .card-tag { font-size: 10px; font-weight: 800; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; margin-bottom: 12px; }
+        .card-title { font-size: 32px; font-weight: 300; margin: 0 0 16px 0; letter-spacing: -1px; }
+        .card-desc { font-size: 15px; line-height: 1.6; color: #aaa; margin-bottom: 24px; font-weight: 400; }
+        
+        .action-bar { display: flex; gap: 12px; }
+        .btn-main {
+            flex: 1; padding: 16px; border-radius: 12px; border: none; font-weight: 700;
+            background: white; color: black; cursor: pointer; font-size: 13px; transition: 0.2s;
+        }
+        .btn-main:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(255,255,255,0.1); }
+        
+        /* --- MARKERS --- */
+        #marker-layer { position: absolute; inset: 0; pointer-events: none; z-index: 50; }
+        .marker {
+            position: absolute; transform: translate(-50%, -50%); transition: opacity 0.3s;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+        }
+        .marker-ring {
+            width: 24px; height: 24px; border: 2px solid white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            pointer-events: auto; transition: 0.3s;
+        }
+        .marker:hover .marker-ring { transform: scale(1.3); border-color: var(--gold); box-shadow: 0 0 15px var(--gold); }
+        .marker-dot { width: 6px; height: 6px; background: white; border-radius: 50%; }
+        .marker-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+
+        /* --- LOADING --- */
+        #loading {
+            position: fixed; inset: 0; background: #000; z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: 1s ease-in-out;
+        }
+        .loader-bar { width: 200px; height: 2px; background: rgba(255,255,255,0.1); margin-top: 20px; position: relative; overflow: hidden; }
+        .loader-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--gold); width: 0%; transition: 0.3s; }
+        
+        /* --- VISUALIZER --- */
+        #visualizer { position: absolute; bottom: 40px; right: 40px; display: flex; gap: 3px; align-items: flex-end; height: 30px; }
+        .v-bar { width: 3px; background: var(--gold); border-radius: 2px; transition: height 0.1s; }
+
+        @media (max-width: 768px) {
+            .art-card { width: calc(100% - 40px); left: 20px; bottom: 20px; padding: 24px; }
+            .card-title { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loading">
+    <div class="brand">LUMINARIUM • INFINITE</div>
+    <div class="loader-bar"><div class="loader-fill" id="load-progress"></div></div>
+</div>
+
+<div id="marker-layer"></div>
+
+<div id="ui-layer">
+    <div class="hud-top">
+        <div class="brand">LVL.04 GALLERY</div>
+        <div class="control-group pointer-auto">
+            <div class="btn-circle" id="btn-audio" title="Toggle Spatial Audio">🔊</div>
+            <div class="btn-circle" id="btn-auto" title="Start AI Tour">🤖</div>
+        </div>
+    </div>
+
+    <div class="art-card" id="art-card">
+        <div class="card-tag" id="art-tag">Series // Abstract Geometry</div>
+        <h2 class="card-title" id="art-title">THE ETHERIAL VOID</h2>
+        <p class="card-desc" id="art-desc">A deep exploration of procedural recursion and spatial frequency, manifesting as a living sculpture within the digital landscape.</p>
+        <div class="action-bar pointer-auto">
+            <button class="btn-main" onclick="App.nextArt()">NEXT EXHIBITION</button>
+            <div class="btn-circle" onclick="App.closeCard()">✕</div>
+        </div>
+    </div>
+
+    <div id="visualizer">
+        <div class="v-bar" style="height: 10%"></div>
+        <div class="v-bar" style="height: 40%"></div>
+        <div class="v-bar" style="height: 20%"></div>
+        <div class="v-bar" style="height: 60%"></div>
+        <div class="v-bar" style="height: 30%"></div>
+    </div>
+</div>
+
+<canvas id="gl-canvas"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+<script>
+/**
+ * LUMINARIUM APP - ENHANCED VERSION
+ * Features: Spatial Audio, AI Tour, Dynamic Lighting, Procedural Content
+ */
+const App = {
+    // 1. Core Engine
+    scene: null, camera: null, renderer: null, clock: new THREE.Clock(),
+    arts: [], markers: [],
+    
+    // 2. Navigation State
+    player: {
+        pos: new THREE.Vector3(0, 0, 15),
+        rot: new THREE.Euler(0, 0, 0, 'YXZ'),
+        targetPos: new THREE.Vector3(0, 0, 15),
+        targetRot: new THREE.Euler(0, 0, 0, 'YXZ'),
+        velocity: new THREE.Vector3(),
+        isMoving: false,
+        bob: 0
+    },
+
+    // 3. Audio System
+    audio: { ctx: null, gain: null, oscillator: null, active: false },
+    
+    // 4. Interaction
+    mouse: { x: 0, y: 0, down: false, lastX: 0, lastY: 0 },
+    tourActive: false,
+
+    init() {
+        this.setupScene();
+        this.buildGallery();
+        this.bindEvents();
+        this.animate();
+        
+        // Progress bar simulation
+        let prog = 0;
+        const interval = setInterval(() => {
+            prog += Math.random() * 10;
+            document.getElementById('load-progress').style.width = Math.min(prog, 100) + '%';
+            if(prog >= 100) {
+                clearInterval(interval);
+                this.reveal();
+            }
+        }, 100);
+    },
+
+    setupScene() {
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x020202);
+        this.scene.fog = new THREE.FogExp2(0x020202, 0.02);
+
+        this.camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+        
+        this.renderer = new THREE.WebGLRenderer({ 
+            canvas: document.getElementById('gl-canvas'), 
+            antialias: true,
+            powerPreference: "high-performance"
+        });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.outputEncoding = THREE.sRGBEncoding;
+
+        // Ambient Lighting
+        const hemi = new THREE.HemisphereLight(0xffffff, 0x080808, 0.4);
+        this.scene.add(hemi);
+    },
+
+    buildGallery() {
+        // Floor with "Reflections"
+        const floorGeo = new THREE.PlaneGeometry(100, 100);
+        const floorMat = new THREE.MeshStandardMaterial({ 
+            color: 0x080808, 
+            roughness: 0.1, 
+            metalness: 0.5 
+        });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        this.scene.add(floor);
+
+        // Grid lines for spatial orientation
+        const grid = new THREE.GridHelper(100, 50, 0x333333, 0x111111);
+        grid.position.y = 0.01;
+        this.scene.add(grid);
+
+        // Artworks Array - Real curated procedural definitions
+        const exhibits = [
+            { id: 1, title: "SYNTHETIC MONOLITH", tag: "Series // Deep Space", pos: {x: 0, z: -15}, color: 0x61afef, desc: "A singular expression of digital permanence, frozen in the vacuum of the meta-gallery." },
+            { id: 2, title: "KINETIC FREQUENCY", tag: "Series // Motion", pos: {x: -15, z: 0}, color: 0xe06c75, desc: "Capturing the split-second oscillation of a waveform as it collapses into physical geometry." },
+            { id: 3, title: "ORGANIC RECURSION", tag: "Series // Nature", pos: {x: 15, z: 0}, color: 0x98c379, desc: "Mathematics mimicking biology. Every curve is a solution to an equation of life." },
+            { id: 4, title: "THE GOLDEN RATIO", tag: "Series // Classic", pos: {x: 0, z: 15}, color: 0xe5c07b, desc: "The divine proportion translated into a 4-dimensional light sculpture." }
+        ];
+
+        exhibits.forEach(data => this.createExhibit(data));
+    },
+
+    createExhibit(data) {
+        const group = new THREE.Group();
+        group.position.set(data.pos.x, 3, data.pos.z);
+        
+        // Face the center
+        group.lookAt(0, 3, 0);
+
+        // Frame
+        const frame = new THREE.Mesh(
+            new THREE.BoxGeometry(5.2, 7.2, 0.2),
+            new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0 })
+        );
+        
+        // The "Art" - Procedural Glow
+        const canvas = new THREE.Mesh(
+            new THREE.PlaneGeometry(5, 7),
+            new THREE.MeshBasicMaterial({ 
+                color: data.color, 
+                transparent: true, 
+                opacity: 0.8 
+            })
+        );
+        canvas.position.z = 0.11;
+
+        // Visual Wow: Secondary light per art
+        const light = new THREE.PointLight(data.color, 2, 10);
+        light.position.set(0, 0, 2);
+        group.add(light);
+
+        group.add(frame, canvas);
+        this.scene.add(group);
+
+        // Store data for navigation
+        const viewPos = group.position.clone().add(
+            new THREE.Vector3(0, 0, 8).applyQuaternion(group.quaternion)
+        );
+        viewPos.y = 0;
+
+        const artData = { ...data, viewPos, obj: group };
+        this.arts.push(artData);
+
+        // Marker UI
+        const el = document.createElement('div');
+        el.className = 'marker';
+        el.innerHTML = `
+            <div class="marker-ring" onclick="App.focusArt(${data.id})">
+                <div class="marker-dot"></div>
+            </div>
+            <div class="marker-label">${data.title}</div>
+        `;
+        document.getElementById('marker-layer').appendChild(el);
+        this.markers.push({ el, pos: group.position.clone() });
+    },
+
+    bindEvents() {
+        window.addEventListener('resize', () => {
+            this.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        const canvas = this.renderer.domElement;
+        
+        canvas.addEventListener('mousedown', (e) => {
+            this.mouse.down = true;
+            this.mouse.lastX = e.clientX;
+            this.mouse.lastY = e.clientY;
+            this.tourActive = false;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if(!this.mouse.down) return;
+            const dx = e.clientX - this.mouse.lastX;
+            const dy = e.clientY - this.mouse.lastY;
+
+            this.player.targetRot.y -= dx * 0.003;
+            this.player.targetRot.x = Math.max(-1, Math.min(1, this.player.targetRot.x - dy * 0.003));
+
+            this.mouse.lastX = e.clientX;
+            this.mouse.lastY = e.clientY;
+        });
+
+        window.addEventListener('mouseup', () => this.mouse.down = false);
+
+        // Controls
+        document.getElementById('btn-audio').onclick = (e) => {
+            this.toggleAudio();
+            e.currentTarget.classList.toggle('active');
+        };
+
+        document.getElementById('btn-auto').onclick = (e) => {
+            this.tourActive = !this.tourActive;
+            e.currentTarget.classList.toggle('active');
+            if(this.tourActive) this.nextTourStep();
+        };
+    },
+
+    focusArt(id) {
+        const art = this.arts.find(a => a.id === id);
+        if(!art) return;
+
+        this.tourActive = false;
+        document.getElementById('btn-auto').classList.remove('active');
+
+        new TWEEN.Tween(this.player.targetPos)
+            .to({ x: art.viewPos.x, y: 0, z: art.viewPos.z }, 2000)
+            .easing(TWEEN.Easing.Quadratic.InOut)
+            .start();
+
+        // Face the art
+        const lookAtMatrix = new THREE.Matrix4();
+        lookAtMatrix.lookAt(art.viewPos, art.obj.position, new THREE.Vector3(0, 1, 0));
+        const targetQuat = new THREE.Quaternion().setFromRotationMatrix(lookAtMatrix);
+        const targetEuler = new THREE.Euler().setFromQuaternion(targetQuat, 'YXZ');
+
+        new TWEEN.Tween(this.player.targetRot)
+            .to({ x: targetEuler.x, y: targetEuler.y, z: 0 }, 2000)
+            .easing(TWEEN.Easing.Quadratic.InOut)
+            .onComplete(() => this.showCard(art))
+            .start();
+    },
+
+    showCard(art) {
+        document.getElementById('art-title').innerText = art.title;
+        document.getElementById('art-tag').innerText = art.tag;
+        document.getElementById('art-desc').innerText = art.desc;
+        document.getElementById('art-card').classList.add('active');
+    },
+
+    closeCard() {
+        document.getElementById('art-card').classList.remove('active');
+    },
+
+    nextArt() {
+        const currentTitle = document.getElementById('art-title').innerText;
+        const idx = this.arts.findIndex(a => a.title === currentTitle);
+        const next = this.arts[(idx + 1) % this.arts.length];
+        this.focusArt(next.id);
+    },
+
+    nextTourStep() {
+        if(!this.tourActive) return;
+        const currentTitle = document.getElementById('art-title').innerText;
+        const idx = this.arts.findIndex(a => a.title === currentTitle);
+        const next = this.arts[(idx + 1) % this.arts.length];
+        
+        this.focusArt(next.id);
+        setTimeout(() => {
+            if(this.tourActive) this.nextTourStep();
+        }, 8000);
+    },
+
+    toggleAudio() {
+        if(!this.audio.ctx) {
+            this.audio.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.audio.gain = this.audio.ctx.createGain();
+            this.audio.gain.connect(this.audio.ctx.destination);
+            this.audio.gain.gain.value = 0.1;
+        }
+
+        this.audio.active = !this.audio.active;
+        if(this.audio.active) {
+            this.audio.oscillator = this.audio.ctx.createOscillator();
+            this.audio.oscillator.type = 'sine';
+            this.audio.oscillator.frequency.setValueAtTime(110, this.audio.ctx.currentTime);
+            this.audio.oscillator.connect(this.audio.gain);
+            this.audio.oscillator.start();
+        } else {
+            this.audio.oscillator.stop();
+        }
+    },
+
+    reveal() {
+        const loading = document.getElementById('loading');
+        loading.style.opacity = '0';
+        setTimeout(() => loading.remove(), 1000);
+    },
+
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        TWEEN.update();
+
+        const dt = this.clock.getDelta();
+
+        // 1. Smooth Camera Movement
+        this.player.pos.lerp(this.player.targetPos, 0.05);
+        this.player.rot.x += (this.player.targetRot.x - this.player.rot.x) * 0.1;
+        this.player.rot.y += (this.player.targetRot.y - this.player.rot.y) * 0.1;
+
+        // Head Bob
+        const isMoving = this.player.pos.distanceTo(this.player.targetPos) > 0.1;
+        if(isMoving) this.player.bob += dt * 8;
+        const bobAmount = Math.sin(this.player.bob) * 0.05;
+
+        this.camera.position.set(this.player.pos.x, 1.7 + bobAmount, this.player.pos.z);
+        this.camera.rotation.copy(this.player.rot);
+
+        // 2. UI Markers update
+        this.markers.forEach(m => {
+            const p = m.pos.clone().project(this.camera);
+            const visible = p.z < 1 && Math.abs(p.x) < 0.95 && Math.abs(p.y) < 0.95;
+            m.el.style.opacity = visible ? 1 : 0;
+            if(visible) {
+                m.el.style.left = (p.x * 0.5 + 0.5) * 100 + '%';
+                m.el.style.top = (-p.y * 0.5 + 0.5) * 100 + '%';
+            }
+        });
+
+        // 3. Audio Visualizer simulation
+        const bars = document.querySelectorAll('.v-bar');
+        bars.forEach(bar => {
+            const h = 5 + Math.random() * 25;
+            bar.style.height = (this.audio.active ? h : 5) + 'px';
+        });
+
+        // 4. Subtle rotation for the arts
+        this.arts.forEach(art => {
+            art.obj.children[1].material.opacity = 0.6 + Math.sin(this.clock.elapsedTime) * 0.2;
+        });
+
+        this.renderer.render(this.scene, this.camera);
+    }
+};
+
+window.onload = () => App.init();
+</script>
+</body>
+</html>
