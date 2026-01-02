@@ -1,3 +1,4 @@
+<!-- app/pages/publications/index.vue -->
 <script setup lang="ts">
 import { useEntryList } from '~/composables/useEntry'
 import { getJalaliParts, getGregorianParts } from '~/utils/date'

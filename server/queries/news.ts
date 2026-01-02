@@ -1,3 +1,4 @@
+// server/queries/news.ts
 import type { Locale } from '@prisma/client'
 import { prisma } from '~~/server/lib/prisma'
 

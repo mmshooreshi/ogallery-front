@@ -1,3 +1,4 @@
+<!-- app/pages/studio/index.vue -->
 <script setup lang="ts">
 import { useEntryList } from '~/composables/useEntry'
 

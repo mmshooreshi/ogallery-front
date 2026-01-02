@@ -1,3 +1,4 @@
+<!-- app/pages/window/[slug].vue -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useEntryDetail } from '~/composables/useEntry'

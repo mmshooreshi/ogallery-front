@@ -1,3 +1,4 @@
+// server/routes/_q/[kind]/[slug].get.ts
 import { getEntryDetail } from '~~/server/queries/common'
 
 export default defineEventHandler(async (event) => {

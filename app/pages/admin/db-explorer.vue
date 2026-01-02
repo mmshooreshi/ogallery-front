@@ -1,3 +1,4 @@
+<!-- app/pages/admin/db-explorer.vue -->
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useLocalStorage, useDebounceFn } from '@vueuse/core'

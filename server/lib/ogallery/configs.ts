@@ -183,55 +183,61 @@ export const NewsItemConfig: ScraperConfig = {
 }
 
 
-// --- 1. VIEWING ROOMS CONFIG ---
-// server/lib/ogallery/configs.ts
-
-// --- 1. VIEWING ROOMS CONFIG ---
+// --------------------------------------------------------------------------
+// VIEWING ROOMS CONFIG (Fixed for Image-Link structure)
+// --------------------------------------------------------------------------
+// [CHANGED] Updated configuration for Deep Scraping and correct text selectors
 export const ViewingRoomsConfig: ScraperConfig = {
   type: 'VIEWING-ROOM',
-  baseUrl: 'https://ogallery.net',
+  baseUrl: BASE,
   paths: {
     list: '/en/viewing-rooms',
-    detail: (slug, locale) => `/${locale.toLowerCase()}/viewing-rooms/${slug}`,
+    detail: (slug, locale) => `${BASE}/${locale.toLowerCase()}/viewing-rooms/${slug}`,
   },
   selectors: {
-    // List Page
     listItems: '.exhibition-card a.exhibition-card-thumb',
-    
-    // Detail Page
-    title: '.container h2', // "Omid Moshksar"
-    dateString: '.container h5:nth-of-type(2)', // "November 12 - 29 2021"
-    
+    listName: '+ .exhibition-card-title', // Sibling text
+
+    title: '.container h2', 
+    dateString: '.container h5:nth-of-type(2)',
     customProps: {
-      artistName: '.container h3 a', // Link to artist profile
+      artistName: '.container h3 a',
     },
 
-    // Hero Image
+    body: {
+      preferredId: null,
+      headingTags: [],
+      keywords: { EN: ['.'], FA: ['.'] },
+      contentWrapper: '.col-lg-6', // Text column
+      paragraphSelector: 'p',
+      sectionKey: 'STATEMENT',
+    },
+
     image: {
       selector: '#selected-work img',
       attr: 'src',
       alt: 'title'
     },
 
-    // Body (Often empty or just a statement)
-    body: {
-      preferredId: null,
-      headingTags: ['h5'], // "Online Viewing Room"
-      keywords: { EN: ['.'], FA: ['.'] },
-      contentWrapper: '.container .row.text-center', // The header block
-      paragraphSelector: 'p', // Might not exist, which is fine
-      sectionKey: 'STATEMENT',
-    },
-
     cvLink: null,
     portfolioLink: null,
 
-    // Works (The grid of artworks)
     works: {
-      container: 'figure.artwork-viewingroom',
-      captionAttr: 'data-caption', // We'll extract specific caption elements in engine if needed, but this triggers the loop
+      container: 'figure.artwork-viewingroom > a', // Link to child page
+      captionAttr: 'data-caption',
+      
+      // [CHANGED] Deep scrape config
+      deepScrape: {
+        enabled: true,
+        images: { 
+          selector: '#art-sliderShow .carousel-item img', 
+          attr: 'data-src' 
+        },
+        caption: '#art-title h5:first-of-type',
+        status: '#art-title h5:nth-of-type(2)'
+      }
     },
-    
+
     installations: null,
   },
 };

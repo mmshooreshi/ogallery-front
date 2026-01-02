@@ -1,3 +1,4 @@
+// server/routes/_admin/db/query.post.ts
 import { prisma } from "~~/server/lib/prisma";
 import { readBody, createError } from 'h3'
 

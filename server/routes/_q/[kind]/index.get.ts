@@ -1,3 +1,4 @@
+// server/routes/_q/[kind]/index.get.ts
 import { listEntries } from '~~/server/queries/common'
 
 export default defineEventHandler(async (event) => {

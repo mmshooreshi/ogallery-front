@@ -91,18 +91,28 @@ export default defineEventHandler(async (event) => {
   // Fallback: If cvUrl is missing in locale, check props (common in Publications)
   const cvUrl = enLoc?.cvUrl ?? (scraped.props as any)?.pdfUrl ?? null;
   const portfolioUrl = enLoc?.portfolioUrl ?? null;
+
+  // [CHANGED] Include extraImages in URL extraction
   const featuredImageUrl = (scraped.props as any)?.featuredImage?.url ?? null;
-
-  const workUrls = (scraped.works ?? []).map((w) => w?.full);
+  const workUrls = (scraped.works ?? []).flatMap((w) => [w?.full, ...(w.extraImages || [])]); // Flatten extraImages
   const installationUrls = (scraped.installations ?? []).map((i) => i?.full);
-
-  const allMediaUrls = uniq([
+  
+  const allMediaUrls = [...new Set([
     featuredImageUrl,
-    cvUrl,
-    portfolioUrl,
     ...workUrls,
     ...installationUrls,
-  ]);
+  ].filter(Boolean) as string[])];
+
+  // const allMediaUrls = uniq([
+  //   featuredImageUrl,
+  //   cvUrl,
+  //   portfolioUrl,
+  //   ...workUrls,
+  //   ...installationUrls,
+  // ]);
+
+
+  
 
   // 4. Create Missing Media (Bulk)
   const existingMedia = allMediaUrls.length
@@ -241,22 +251,48 @@ export default defineEventHandler(async (event) => {
   }
 
   // Works
-  for (const w of scraped.works ?? []) {
+// [CHANGED] Loop to handle Main work + Extra images + Status
+for (const w of scraped.works ?? []) {
     if (!w?.full) continue;
+    
+    // Main Work
     const id = mediaIdByUrl.get(w.full);
-    if (!id) continue;
-    entryMediaToCreate.push({
-      entryId: entry.id,
-      mediaId: id,
-      role: "SELECTED_WORK",
-      ord: ord++,
-      meta: {
-        thumb: w.thumb ?? null,
-        captionEn: w.captionEn ?? null,
-        captionFa: w.captionFa ?? null,
-      },
-    });
-  }
+    if (id) {
+      entryMediaToCreate.push({
+        entryId: entry.id,
+        mediaId: id,
+        role: "SELECTED_WORK",
+        ord: ord++,
+        meta: {
+          thumb: w.thumb ?? null,
+          captionEn: w.captionEn ?? null,
+          captionFa: w.captionFa ?? null,
+          status: w.status ?? null // Save Status
+        },
+      });
+    }
+
+    // Extra Images (Details)
+    if (w.extraImages && w.extraImages.length) {
+        for (const extraUrl of w.extraImages) {
+            const extraId = mediaIdByUrl.get(extraUrl);
+            if (extraId) {
+                entryMediaToCreate.push({
+                    entryId: entry.id,
+                    mediaId: extraId,
+                    role: "SELECTED_WORK", 
+                    ord: ord++,
+                    meta: {
+                        parentWork: w.full,
+                        isDetail: true,
+                        captionEn: w.captionEn ? `Detail` : null,
+                        captionFa: w.captionFa ? `جزئیات` : null,
+                    }
+                });
+            }
+        }
+    }
+}
 
   // Installations
   for (const inst of scraped.installations ?? []) {

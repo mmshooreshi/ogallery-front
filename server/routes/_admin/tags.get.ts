@@ -1,3 +1,4 @@
+// server/routes/_admin/tags.get.ts
 import { defineEventHandler } from 'h3'
 import { prisma } from '~~/server/lib/prisma'
 

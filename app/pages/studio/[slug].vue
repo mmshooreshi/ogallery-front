@@ -1,3 +1,4 @@
+<!-- app/pages/studio/[slug].vue -->
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useEntryDetail } from '~/composables/useEntry'

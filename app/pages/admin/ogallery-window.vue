@@ -1,3 +1,4 @@
+<!-- app/pages/admin/ogallery-window.vue -->
 <script setup lang="ts">
 import AdminScraperPipeline from '@/components/Admin/ScraperPipeline.vue'
 </script>

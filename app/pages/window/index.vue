@@ -1,3 +1,4 @@
+<!-- app/pages/window/index.vue -->
 <script setup lang="ts">
 import { useEntryList } from '~/composables/useEntry'
 import { formatEntryDate } from '~/utils/date' // Reuse your util
