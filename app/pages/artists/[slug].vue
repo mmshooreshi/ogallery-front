@@ -138,28 +138,39 @@ const selectedWorks = computed(() => {
     <section id="works" v-if="selectedWorks" class="mt-12 scroll-mt-20 ">
         <h2 class="text-2xl !font-light text-gray-700/90 mb-4 uppercase tracking-tight">{{ t('artists.detail.tabs.selectedWorks') }}</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        <div
-            v-for="(m, i) in selectedWorks"
-            :key="m.media.url"
-            @click="openLightbox(i)"
-            class="cursor-pointer"
-        >
-            <img
-            :src="m.media.url"
-            class="w-full aspect-square object-cover hover:scale-95 hover:opacity-80 transition-transform"
-            :alt="m.media.alt || ''"
-            loading="lazy"
-            decoding="async"
-            />
+<div
+    v-for="(m, i) in selectedWorks"
+    :key="m.media.url"
+    @click="openLightbox(i)"
+    class="cursor-pointer"
+>
+    <img
+      :id="'pswp-thumb-' + i"
+      :src="m.media.url"
+      class="w-full aspect-square object-cover hover:scale-95 hover:opacity-80 transition-transform"
+      :alt="m.media.alt || ''"
+      loading="lazy"
+      decoding="async"
+    />
+</div>
         </div>
-        </div>
-
+<!-- 
         <GalleryLightBox
         v-if="showLightbox"
         :slides="selectedWorks"
         :start-index="lightboxIndex"
         @close="showLightbox = false"
-        />
+        /> -->
+
+        <ClientOnly>
+          <GalleryLightBoxSwipe
+            v-if="showLightbox"
+            :slides="selectedWorks"
+            :start-index="lightboxIndex"
+            @close="showLightbox = false"
+          />
+      </ClientOnly>
+
     </section>
 
         <!-- Installation Views -->

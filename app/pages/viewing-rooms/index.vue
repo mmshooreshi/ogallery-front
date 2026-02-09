@@ -34,7 +34,7 @@ const handleImageLoad = (event: Event) => {
 <template>
   <main class="relative min-h-screen bg-white pb-20">
     
-    <div class="fixed top-[60px] left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-b border-black/5 py-5">
+    <div class="fixed top-[60px] left-0 right-0 z-9 bg-white/95 backdrop-blur-sm border-b border-black/5 py-5">
       <div class="flex justify-center items-center gap-3 text-base uppercase  text-[#595a5c]">
         <a href="#past" class="hover:text-[#ffde00] text-[#595a5c] transition-colors font-bold no-underline">Past</a>
       </div>

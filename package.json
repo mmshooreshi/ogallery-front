@@ -45,6 +45,7 @@
     "nuxt": "^4.1.1",
     "nuxt-storage": "^1.2.2",
     "openai": "^5.23.0",
+    "photoswipe": "^5.4.4",
     "pinia": "^3.0.3",
     "vite-svg-loader": "^5.1.0",
     "vue": "^3.5.20",
