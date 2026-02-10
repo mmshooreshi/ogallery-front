@@ -72,7 +72,7 @@ const err = ref('')
 
 onMounted(async () => {
   const me = await refresh()
-  if (me) router.replace((route.query.next as string) || '/admin')
+  if (me) router.replace((route.query.next as string) || '/admin/dashboard')
 })
 
 async function onSubmit() {
@@ -80,7 +80,7 @@ async function onSubmit() {
   busy.value = true
   try {
     await login(email.value, password.value)
-    router.replace((route.query.next as string) || '/admin')
+    router.replace((route.query.next as string) || '/admin/dashboard')
   } catch (e: any) {
     err.value = e?.data?.message || e?.message || 'Invalid email or password'
   } finally {
